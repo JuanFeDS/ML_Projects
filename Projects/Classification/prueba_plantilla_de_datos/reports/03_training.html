@@ -1,0 +1,371 @@
+<!DOCTYPE html><html lang='es'>
+<head><meta charset='utf-8'><title>Reporte de Entrenamiento — Spaceship Titanic</title>
+<style>
+:root {
+  --primary: #5b21b6;
+  --primary-light: #7c3aed;
+  --success: #059669;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --info: #0284c7;
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+  --text: #1e293b;
+  --muted: #64748b;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-bottom: 60px;
+  line-height: 1.6;
+  font-size: 15px;
+}
+.rpt-header {
+  background: linear-gradient(135deg, #1e1b4b 0%, var(--primary) 60%, var(--primary-light) 100%);
+  color: white;
+  padding: 40px 48px 36px;
+  margin-bottom: 40px;
+}
+.rpt-header h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  margin-bottom: 6px;
+}
+.rpt-header .rpt-subtitle {
+  opacity: 0.7;
+  font-size: 0.875rem;
+}
+.rpt-body { padding: 0 48px; }
+h2 {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 36px 0 14px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--border);
+  letter-spacing: -0.01em;
+}
+h3 {
+  color: var(--muted);
+  margin: 22px 0 10px;
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+p { color: var(--muted); margin-bottom: 12px; font-size: 0.9375rem; }
+b { color: var(--text); }
+.rpt-intro {
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 20px 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  margin-bottom: 28px;
+  border-left: 4px solid var(--primary-light);
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.75;
+}
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+  gap: 12px;
+  margin: 14px 0 28px;
+}
+.metric-card {
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 16px 18px 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  border-top: 3px solid var(--primary-light);
+}
+.metric-card .mv {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+  display: block;
+  line-height: 1.2;
+  margin-bottom: 5px;
+}
+.metric-card .ml {
+  font-size: 0.71rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+.callout {
+  border-radius: 8px;
+  padding: 13px 18px;
+  margin: 14px 0 20px;
+  border-left: 4px solid;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+.callout.info    { background: #eff6ff; border-color: var(--info);    color: #1e40af; }
+.callout.success { background: #f0fdf4; border-color: var(--success); color: #166534; }
+.callout.warning { background: #fffbeb; border-color: var(--warning); color: #92400e; }
+.callout.danger  { background: #fef2f2; border-color: var(--danger);  color: #991b1b; }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  background: var(--surface);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  margin: 10px 0 20px;
+  font-size: 0.84rem;
+}
+th {
+  background: #f1f5f9;
+  color: var(--text);
+  font-weight: 600;
+  padding: 9px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+td { padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: var(--muted); }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #f8fafc; }
+.plotly-graph-div { margin: 14px 0 6px; }
+</style></head>
+<body>
+<div class="rpt-header"><h1>Reporte de Entrenamiento — Spaceship Titanic</h1><div class="rpt-subtitle">Generado: 2026-03-26 22:09</div></div>
+<div class="rpt-body">
+<div class="rpt-intro">Se evaluaron <b>10 modelos</b> mediante StratifiedKFold (5 folds). El mejor modelo en CV (<b>CatBoost</b>) fue tuneado con Optuna TPE (25 trials) y comparado contra Stacking y un Mixture of Experts (MoE) que entrena un CatBoost especializado por segmento (cryo / activo). El modelo ganador alcanza una precision de <b>81.0%</b> y un ROC-AUC de <b>0.9036</b> en el conjunto de validacion (hold-out 20%).</div>
+<div class="metrics-grid"><div class="metric-card"><span class="mv">81.0%</span><span class="ml">val accuracy</span></div><div class="metric-card"><span class="mv">0.9036</span><span class="ml">val ROC-AUC</span></div><div class="metric-card"><span class="mv">81.0%</span><span class="ml">CatBoost tuneado</span></div><div class="metric-card"><span class="mv">80.2%</span><span class="ml">stacking</span></div><div class="metric-card"><span class="mv">80.9%</span><span class="ml">MoE</span></div><div class="metric-card"><span class="mv">10</span><span class="ml">modelos evaluados</span></div></div>
+<h2>Cross-Validation Accuracy (todos los modelos)</h2>
+<p>Comparacion de todos los clasificadores con StratifiedKFold 5-fold sobre el conjunto de entrenamiento (80% del total). El Baseline (DummyClassifier) sirve como piso minimo de referencia.</p>
+<h3>CV Accuracy — todos los modelos</h3>
+<div>                        <script type="text/javascript">window.PlotlyConfig = {MathJaxConfig: 'local'};</script>
+        <script charset="utf-8" src="https://cdn.plot.ly/plotly-3.0.1.min.js" integrity="sha256-oy6Be7Eh6eiQFs5M7oXuPxxm9qbJXEtTpfSI93dW16Q=" crossorigin="anonymous"></script>                <div id="f51db185-d2c0-4f13-95e8-71c73172032f" class="plotly-graph-div" style="height:450px; width:100%;"></div>            <script type="text/javascript">                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("f51db185-d2c0-4f13-95e8-71c73172032f")) {                    Plotly.newPlot(                        "f51db185-d2c0-4f13-95e8-71c73172032f",                        [{"error_y":{"array":[0.007,0.0045,0.0065,0.0041,0.0057,0.0042,0.0027,0.0052,0.0098,0.0001],"type":"data","visible":true},"marker":{"color":"steelblue"},"text":["0.8141","0.8115","0.8078","0.8049","0.8018","0.8003","0.7969","0.7899","0.7895","0.5036"],"textposition":"outside","x":["CatBoost","MoE_CatBoost","HistGradientBoosting","LightGBM","GradientBoosting","RandomForest","XGBoost","ExtraTrees","LogisticRegression","Baseline"],"y":[0.8141,0.8115,0.8078,0.8049,0.8018,0.8003,0.7969,0.7899,0.7895,0.5036],"type":"bar"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}},"yaxis":{"title":{"text":"Accuracy"},"range":[0,1]},"title":{"text":"CV Accuracy por modelo (media +\u002f- std, 5-fold)"},"xaxis":{"title":{"text":"Modelo"}},"height":450},                        {"responsive": true}                    )                };            </script>        </div>
+<h2>Validacion: Tuneado vs Stacking vs MoE</h2>
+<p>Evaluacion final en hold-out (20%). Se compara el modelo tuneado (CatBoost), el Stacking y el MoE para seleccionar el ganador.</p>
+<h3>Val Accuracy y ROC-AUC</h3>
+<div>                            <div id="e63760d9-59ca-45df-b8a6-14cbb2ee28ff" class="plotly-graph-div" style="height:400px; width:100%;"></div>            <script type="text/javascript">                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("e63760d9-59ca-45df-b8a6-14cbb2ee28ff")) {                    Plotly.newPlot(                        "e63760d9-59ca-45df-b8a6-14cbb2ee28ff",                        [{"marker":{"color":"steelblue"},"name":"val_accuracy","text":["0.8103","0.8015","0.8092"],"textposition":"outside","x":["CatBoost (tuneado)","Stacking","MoE"],"y":[0.8103,0.8015,0.8092],"type":"bar"},{"marker":{"color":"darkorange"},"name":"val_roc_auc","text":["0.9036","0.8935","0.9033"],"textposition":"outside","x":["CatBoost (tuneado)","Stacking","MoE"],"y":[0.9036,0.8935,0.9033],"type":"bar"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}},"yaxis":{"range":[0,1.1]},"barmode":"group","title":{"text":"Metricas de Validacion: Tuneado vs Stacking"},"height":400},                        {"responsive": true}                    )                };            </script>        </div>
+<h2>Feature Importance (top 20)</h2>
+<p>Importancia de features del modelo ganador. Permite verificar coherencia con el analisis estadistico realizado en el EDA.</p>
+<h3>Feature Importance</h3>
+<div>                            <div id="3099187b-ca6d-4680-9991-c80906648bb5" class="plotly-graph-div" style="height:500px; width:100%;"></div>            <script type="text/javascript">                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("3099187b-ca6d-4680-9991-c80906648bb5")) {                    Plotly.newPlot(                        "3099187b-ca6d-4680-9991-c80906648bb5",                        [{"marker":{"color":"seagreen"},"orientation":"h","x":[9.866450933719626,8.02424778588368,6.729368388204179,6.6736773867425985,6.533683109058458,5.943009925874929,5.077765563885752,4.7262557301561,4.641912300954645,4.3830040401786485,4.2243011549757306,4.202808993407301,3.667315972979366,3.012940820427571,2.8107747594511028,2.6542144582035787,2.6067716346075835,2.5230605221725897,2.184707094763312,2.0574818123329432],"y":["CabinNumber_DeckPercentile","Spa","VRDeck","Side_Encoded","FoodCourt","SpendingCategories","HomePlanet_Earth","RoomService","ShoppingMall","TotalSpending_Log","HomePlanet_Europa","Age","Deck_E","Deck_G","HomePlanet_Mars","CryoSleep_Encoded","Deck_F","HasSpending","GroupSize","Destination_TRAPPIST-1e"],"type":"bar"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}},"yaxis":{"autorange":"reversed"},"title":{"text":"Feature Importance — modelo ganador"},"xaxis":{"title":{"text":"Importancia"}},"height":500},                        {"responsive": true}                    )                };            </script>        </div>
+<h2>Error Analysis — Tasa de error por segmento</h2>
+<p>Porcentaje de predicciones incorrectas del modelo ganador desglosado por variable. Permite identificar que segmentos son mas dificiles de clasificar.</p>
+<p><b>CryoSleep</b></p>
+<p><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>CryoSleep</th>
+      <th>n</th>
+      <th>errors</th>
+      <th>error_rate</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Active</td>
+      <td>1122</td>
+      <td>217</td>
+      <td>0.1934</td>
+    </tr>
+    <tr>
+      <td>Cryo</td>
+      <td>564</td>
+      <td>103</td>
+      <td>0.1826</td>
+    </tr>
+    <tr>
+      <td>Unknown</td>
+      <td>17</td>
+      <td>3</td>
+      <td>0.1765</td>
+    </tr>
+  </tbody>
+</table></p>
+<p><b>HomePlanet</b></p>
+<p><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>HomePlanet</th>
+      <th>n</th>
+      <th>errors</th>
+      <th>error_rate</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Unknown</td>
+      <td>14</td>
+      <td>6</td>
+      <td>0.4286</td>
+    </tr>
+    <tr>
+      <td>Earth</td>
+      <td>931</td>
+      <td>246</td>
+      <td>0.2642</td>
+    </tr>
+    <tr>
+      <td>Mars</td>
+      <td>334</td>
+      <td>38</td>
+      <td>0.1138</td>
+    </tr>
+    <tr>
+      <td>Europa</td>
+      <td>424</td>
+      <td>33</td>
+      <td>0.0778</td>
+    </tr>
+  </tbody>
+</table></p>
+<p><b>Destination</b></p>
+<p><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Destination</th>
+      <th>n</th>
+      <th>errors</th>
+      <th>error_rate</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>PSO J318.5-22</td>
+      <td>167</td>
+      <td>45</td>
+      <td>0.2695</td>
+    </tr>
+    <tr>
+      <td>TRAPPIST-1e</td>
+      <td>1144</td>
+      <td>229</td>
+      <td>0.2002</td>
+    </tr>
+    <tr>
+      <td>Unknown</td>
+      <td>34</td>
+      <td>5</td>
+      <td>0.1471</td>
+    </tr>
+    <tr>
+      <td>55 Cancri e</td>
+      <td>358</td>
+      <td>44</td>
+      <td>0.1229</td>
+    </tr>
+  </tbody>
+</table></p>
+<p><b>AgeCategory</b></p>
+<p><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>AgeCategory</th>
+      <th>n</th>
+      <th>errors</th>
+      <th>error_rate</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Child</td>
+      <td>164</td>
+      <td>44</td>
+      <td>0.2683</td>
+    </tr>
+    <tr>
+      <td>YoungAdult</td>
+      <td>651</td>
+      <td>127</td>
+      <td>0.1951</td>
+    </tr>
+    <tr>
+      <td>Teen</td>
+      <td>142</td>
+      <td>25</td>
+      <td>0.1761</td>
+    </tr>
+    <tr>
+      <td>Adult</td>
+      <td>687</td>
+      <td>118</td>
+      <td>0.1718</td>
+    </tr>
+    <tr>
+      <td>Senior</td>
+      <td>59</td>
+      <td>9</td>
+      <td>0.1525</td>
+    </tr>
+  </tbody>
+</table></p>
+<p><b>Deck</b></p>
+<p><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Deck</th>
+      <th>n</th>
+      <th>errors</th>
+      <th>error_rate</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>G</td>
+      <td>523</td>
+      <td>147</td>
+      <td>0.2811</td>
+    </tr>
+    <tr>
+      <td>E</td>
+      <td>167</td>
+      <td>31</td>
+      <td>0.1856</td>
+    </tr>
+    <tr>
+      <td>F</td>
+      <td>541</td>
+      <td>97</td>
+      <td>0.1793</td>
+    </tr>
+    <tr>
+      <td>D</td>
+      <td>105</td>
+      <td>17</td>
+      <td>0.1619</td>
+    </tr>
+    <tr>
+      <td>A</td>
+      <td>45</td>
+      <td>7</td>
+      <td>0.1556</td>
+    </tr>
+    <tr>
+      <td>Unknown</td>
+      <td>22</td>
+      <td>3</td>
+      <td>0.1364</td>
+    </tr>
+    <tr>
+      <td>C</td>
+      <td>154</td>
+      <td>12</td>
+      <td>0.0779</td>
+    </tr>
+    <tr>
+      <td>B</td>
+      <td>146</td>
+      <td>9</td>
+      <td>0.0616</td>
+    </tr>
+  </tbody>
+</table></p>
+<h2>Threshold Optimization</h2>
+<p>Busqueda de umbral optimo en [0.30, 0.70] (200 puntos). <b>Umbral optimo: 0.3965</b> → val_accuracy: <b>0.8186</b> (vs 0.8103 con 0.50, ganancia: +0.0083).</p>
+</div></body></html>
