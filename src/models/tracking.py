@@ -63,24 +63,3 @@ def log_params_dict(params: Dict[str, Any]):
     """Loguea un diccionario de parametros."""
     mlflow.log_params(params)
 
-def log_plotly_figure(fig, filename: str):
-    """Guarda una figura de Plotly como artefacto HTML en MLflow."""
-    import tempfile
-    from pathlib import Path
-    
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        tmp_path = Path(tmp_dir) / filename
-        fig.write_html(str(tmp_path))
-        mlflow.log_artifact(str(tmp_path))
-
-def log_model_metadata(metadata: Dict[str, Any], filename: str = "model_metadata.json"):
-    """Guarda metadatos del modelo como artefacto JSON."""
-    import json
-    import tempfile
-    from pathlib import Path
-    
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        tmp_path = Path(tmp_dir) / filename
-        with open(tmp_path, "w", encoding="utf-8") as f:
-            json.dump(metadata, f, indent=4)
-        mlflow.log_artifact(str(tmp_path))
