@@ -21,7 +21,6 @@ def build_prediction_md(
     pct_false: float,
     submission_path: str,
     threshold: float = 0.5,
-    ai_insights: str = "",
 ) -> None:
     """Genera reports/04_predictions.md.
 
@@ -36,7 +35,6 @@ def build_prediction_md(
         pct_false: Porcentaje de False sobre el total.
         submission_path: Ruta donde se guardó submission.csv.
         threshold: Umbral de clasificación utilizado.
-        ai_insights: Párrafo de análisis generado por Claude (opcional).
     """
     md = MarkdownReport("Reporte de Predicciones — Spaceship Titanic")
 
@@ -75,10 +73,6 @@ def build_prediction_md(
         "El archivo `submission.csv` contiene las columnas `PassengerId` y "
         "`Transported` (valores booleanos), listo para subir a Kaggle."
     )
-
-    if ai_insights:
-        md.add_section("Análisis")
-        md.add_text(ai_insights)
 
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     md.save(str(REPORTS_DIR / "04_predictions.md"))
