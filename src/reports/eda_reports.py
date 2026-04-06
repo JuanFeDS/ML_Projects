@@ -21,7 +21,6 @@ from src.reports.eda_plots import (
     numeric_histograms,
     numeric_stats_table,
     numeric_vs_target_hist,
-    spending_categories_bar,
     target_pie,
     total_spending_compare,
     unique_values_bar,

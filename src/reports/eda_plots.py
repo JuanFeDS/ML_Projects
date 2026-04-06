@@ -380,35 +380,6 @@ def groupsize_bar(
     return fig
 
 
-def spending_categories_bar(
-    target_by_sc: pd.DataFrame, chi2_sc: float, p_sc: float
-) -> go.Figure:
-    """Barplot de tasa de Transported por SpendingCategories.
-
-    Args:
-        target_by_sc: DataFrame con columnas 'SpendingCategories', 'tasa_transported', 'n'.
-        chi2_sc: Estadistico chi-cuadrado.
-        p_sc: P-valor.
-
-    Returns:
-        Figura Plotly.
-    """
-    fig = px.bar(
-        target_by_sc,
-        x="SpendingCategories",
-        y="tasa_transported",
-        text=target_by_sc["tasa_transported"].apply(lambda x: f"{x:.2%}"),
-        title=(
-            f"SpendingCategories — tasa de Transported  |  "
-            f"chi²={chi2_sc:.1f}, p={p_sc:.2e}"
-        ),
-        color="tasa_transported",
-        color_continuous_scale="RdYlGn",
-    )
-    fig.update_traces(textposition="outside")
-    return fig
-
-
 def decisions_table(decisions: pd.DataFrame) -> go.Figure:
     """Tabla coloreada de decisiones de features.
 
