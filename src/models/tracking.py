@@ -1,16 +1,14 @@
 """
-Utilidades para el seguimiento de experimentos con MLflow.
+Script para el seguimiento de experimentos con MLflow.
 
 Este modulo permite centralizar la configuracion de MLflow y provee 
 funciones helper para loguear parametros, metricas y artefactos.
 """
 import os
-import mlflow
-import mlflow.sklearn
-from typing import Any, Dict, Optional, List
-import pandas as pd
-import numpy as np
+from typing import Any, Dict, Optional
 from contextlib import contextmanager
+
+import mlflow
 
 from src.config.settings import MLFLOW_TRACKING_URI, MLFLOW_EXPERIMENT_NAME
 
@@ -20,7 +18,11 @@ def setup_mlflow():
     mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
 
 @contextmanager
-def mlrun(run_name: str, nested: bool = False, tags: Optional[Dict[str, Any]] = None):
+def mlrun(
+    run_name: str,
+    nested: bool = False,
+    tags: Optional[Dict[str, Any]] = None
+):
     """Context manager para crear un run de MLflow con soporte jerarquico.
 
     1. Si hay un run activo en el hilo actual, crea un run anidado (nested=True).
@@ -33,14 +35,14 @@ def mlrun(run_name: str, nested: bool = False, tags: Optional[Dict[str, Any]] = 
         tags: Diccionario de tags opcionales.
     """
     setup_mlflow()
-    
+
     # 1. Comprobar si ya hay un run activo (vía código o herencia de run_pipeline.py)
     active_run = mlflow.active_run()
     parent_run_id = os.getenv("MLFLOW_PARENT_RUN_ID")
-    
+
     # Decidir si este run debe ser anidado
     should_be_nested = nested or active_run is not None or parent_run_id is not None
-    
+
     if parent_run_id and not active_run:
         # Caso: Ejecución de sub-script heredando del orquestador global
         with mlflow.start_run(run_id=parent_run_id):
@@ -55,11 +57,24 @@ def mlrun(run_name: str, nested: bool = False, tags: Optional[Dict[str, Any]] = 
                 mlflow.set_tags(tags)
             yield run
 
-def log_metrics_dict(metrics: Dict[str, float], step: Optional[int] = None):
-    """Loguea un diccionario de metricas."""
+def log_metrics_dict(
+    metrics: Dict[str, float], 
+    step: Optional[int] = None
+):
+    """Loguea un diccionario de metricas
+    
+    Args:
+        metrics: Diccionario de metricas.
+        step: Paso opcional para series temporales.
+    """
     mlflow.log_metrics(metrics, step=step)
 
-def log_params_dict(params: Dict[str, Any]):
-    """Loguea un diccionario de parametros."""
+def log_params_dict(
+    params: Dict[str, Any]
+):
+    """Loguea un diccionario de parametros.
+    
+    Args:
+        params: Diccionario de parametros.
+    """
     mlflow.log_params(params)
-
