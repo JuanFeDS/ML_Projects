@@ -365,22 +365,13 @@ class ReportFactory:
     """Genera parejas MD/HTML de reportes operacionales a partir de resultados de pipeline."""
 
     @staticmethod
-    def emit_training_reports(
-        results: Dict[str, Any], include_ai: bool = False
-    ) -> None:
+    def emit_training_reports(results: Dict[str, Any]) -> None:
         """Escribe reports/03_training.md y reports/03_training.html.
 
         Args:
             results: Salida de src.pipelines.training_pipeline.run_training_pipeline.
-            include_ai: Si True, enriquece con get_training_insights (no implementado aun).
         """
         from src.reports.training_report import build_training_html, build_training_md
-
-        ai_insights = ""
-        if include_ai:
-            from src.utils.ai_insights import get_training_insights
-            ctx = build_training_insights_context(results)
-            ai_insights = get_training_insights(ctx)
 
         build_training_md(
             cv_results=results["cv_results"],
@@ -396,7 +387,6 @@ class ReportFactory:
             error_tables=results["error_tables"],
             best_threshold=results["best_threshold"],
             threshold_acc=results["threshold_acc"],
-            ai_insights=ai_insights,
         )
         build_training_html(
             cv_results=results["cv_results"],
@@ -409,5 +399,4 @@ class ReportFactory:
             error_tables=results["error_tables"],
             best_threshold=results["best_threshold"],
             threshold_acc=results["threshold_acc"],
-            ai_insights=ai_insights,
         )
