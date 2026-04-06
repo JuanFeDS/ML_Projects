@@ -59,68 +59,6 @@ def _call_claude(prompt: str) -> str:
         return ""
 
 
-def get_eda_insights(context: Dict[str, Any]) -> str:
-    """Genera un párrafo interpretativo sobre el análisis exploratorio.
-
-    Args:
-        context: Diccionario con las claves:
-            - n_rows (int): Número de filas del dataset.
-            - n_cols (int): Número de columnas.
-            - null_pct_avg (float): Porcentaje promedio de nulos.
-            - target_balance (dict): {"True": float, "False": float} en porcentaje.
-            - top_chi2 (list[dict]): Top 3 variables categóricas por chi².
-              Cada dict tiene "feature", "chi2", "p".
-            - top_numeric_corr (list[dict]): Top 3 variables numéricas por |r|.
-              Cada dict tiene "feature", "r", "p_mw".
-            - decisions (list[dict]): Decisiones por feature.
-              Cada dict tiene "feature" y "accion" (MANTENER/TRANSFORMAR/DESCARTAR).
-
-    Returns:
-        Párrafo de análisis en español, o cadena vacía si la API falla.
-    """
-    prompt = (
-        f"Analiza estos resultados del EDA de un dataset de clasificación:\n\n"
-        f"- Dataset: {context.get('n_rows', '?')} filas × {context.get('n_cols', '?')} columnas\n"
-        f"- Nulos promedio: {context.get('null_pct_avg', 0):.1f}%\n"
-        f"- Balance del target: {json.dumps(context.get('target_balance', {}))}\n"
-        f"- Top variables categóricas (chi²): {json.dumps(context.get('top_chi2', []))}\n"
-        f"- Top variables numéricas (correlación): {json.dumps(context.get('top_numeric_corr', []))}\n"
-        f"- Decisiones de features: {json.dumps(context.get('decisions', []))}\n\n"
-        "Interpreta los hallazgos más importantes: calidad del dataset, qué variables "
-        "tienen mayor poder predictivo y si las decisiones de features parecen apropiadas."
-    )
-    return _call_claude(prompt)
-
-
-def get_features_insights(context: Dict[str, Any]) -> str:
-    """Genera un párrafo interpretativo sobre el feature engineering aplicado.
-
-    Args:
-        context: Diccionario con las claves:
-            - fs_name (str): Nombre del feature set.
-            - fs_description (str): Descripción del feature set.
-            - n_features_before (int): Columnas antes del pipeline.
-            - n_features_after (int): Features finales tras encoding/OHE.
-            - n_samples (int): Filas del dataset resultante.
-            - transformations (list[str]): Lista de transformaciones aplicadas.
-
-    Returns:
-        Párrafo de análisis en español, o cadena vacía si la API falla.
-    """
-    prompt = (
-        f"Analiza este proceso de feature engineering:\n\n"
-        f"- Feature set: {context.get('fs_name', '?')}\n"
-        f"- Descripción: {context.get('fs_description', '?')}\n"
-        f"- Features antes: {context.get('n_features_before', '?')} columnas → "
-        f"después: {context.get('n_features_after', '?')} features\n"
-        f"- Muestras resultantes: {context.get('n_samples', '?')}\n"
-        f"- Transformaciones aplicadas: {json.dumps(context.get('transformations', []))}\n\n"
-        "Evalúa si la expansión/reducción de dimensionalidad es razonable, qué "
-        "transformaciones aportan más valor y si hay algún riesgo en el pipeline aplicado."
-    )
-    return _call_claude(prompt)
-
-
 def get_training_insights(context: Dict[str, Any]) -> str:
     """Genera un análisis de los resultados del entrenamiento de modelos.
 
@@ -167,32 +105,3 @@ def get_training_insights(context: Dict[str, Any]) -> str:
     return _call_claude(prompt)
 
 
-def get_prediction_insights(context: Dict[str, Any]) -> str:
-    """Genera un párrafo sobre la distribución de predicciones generadas.
-
-    Args:
-        context: Diccionario con las claves:
-            - model_name (str): Nombre del modelo usado.
-            - exp_id (str): ID del experimento de referencia.
-            - fs_name (str): Feature set del modelo.
-            - n_samples (int): Número de muestras predichas.
-            - threshold (float): Umbral de clasificación usado.
-            - pct_transported (float): Porcentaje predicho como transportado (0-100).
-            - pct_not_transported (float): Porcentaje predicho como no transportado (0-100).
-
-    Returns:
-        Párrafo de análisis en español, o cadena vacía si la API falla.
-    """
-    prompt = (
-        f"Analiza esta distribución de predicciones de un modelo de clasificación:\n\n"
-        f"- Modelo: {context.get('model_name', '?')} (experimento {context.get('exp_id', '?')})\n"
-        f"- Feature set: {context.get('fs_name', '?')}\n"
-        f"- Muestras predichas: {context.get('n_samples', '?')}\n"
-        f"- Umbral de clasificación: {context.get('threshold', 0.5):.4f}\n"
-        f"- Transportados: {context.get('pct_transported', 0):.1f}%\n"
-        f"- No transportados: {context.get('pct_not_transported', 0):.1f}%\n"
-        f"- Balance en train: ~50.4% transportados / 49.6% no transportados\n\n"
-        "Evalúa si la distribución de predicciones es coherente con el balance "
-        "del dataset de entrenamiento y qué implicaciones tiene el umbral elegido."
-    )
-    return _call_claude(prompt)
