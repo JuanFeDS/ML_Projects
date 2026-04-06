@@ -4,26 +4,23 @@
 Este script orquesta el pipeline de transformación, encoding y escalado
 del dataset para un feature set seleccionado, delegando la lógica a src/.
 """
-import sys
+import argparse
 
 import mlflow
 
-# Añadir la raíz del proyecto al path
-sys.path.insert(0, ".")
-
 from src.config.settings import get_train_features, get_train_scaled
-from src.features.feature_sets import FEATURE_SETS
 from src.features.constants import TARGET
+from src.features.feature_sets import DEFAULT_FEATURE_SET, FEATURE_SETS
 from src.models.tracking import mlrun
 from src.pipelines.data_pipeline import load_raw_train, run_ingestion_to_features_pipeline
 from src.reports.feature_reports import build_feature_report
-from src.utils.cli import parse_feature_set_args
+
 
 def main():
     """Ejecuta el flujo secuencial de feature engineering."""
-    # 1. Configuración de Argumentos
-    args = parse_feature_set_args("Feature Engineering — Spaceship Titanic")
-    fs_name = args.feature_set
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--feature-set", default=DEFAULT_FEATURE_SET, choices=list(FEATURE_SETS.keys()))
+    fs_name = parser.parse_args().feature_set
     fs = FEATURE_SETS[fs_name]
 
     print("=" * 60)
