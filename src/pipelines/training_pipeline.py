@@ -41,12 +41,12 @@ from src.models.training import (
     optimize_threshold,
     tune_model,
 )
-from src.reports.experiment_log import (
+from src.reports.experiments.log import (
     append_experiment_log,
     get_next_exp_id,
     is_duplicate_experiment,
 )
-from src.reports.model_cards import write_experiment_card, write_model_card
+from src.reports.experiments.model_cards import write_experiment_card, write_model_card
 
 
 def _get_git_commit() -> str:
