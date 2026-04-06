@@ -29,7 +29,6 @@ def build_training_md(  # pylint: disable=too-many-arguments,too-many-positional
     error_tables: dict,
     best_threshold: float,
     threshold_acc: float,
-    ai_insights: str = "",
 ) -> None:
     """Genera reports/03_training.md.
 
@@ -47,7 +46,6 @@ def build_training_md(  # pylint: disable=too-many-arguments,too-many-positional
         error_tables: Tablas de tasa de error por segmento.
         best_threshold: Umbral óptimo encontrado.
         threshold_acc: Accuracy con el umbral óptimo.
-        ai_insights: Párrafo de análisis generado por Claude (opcional).
     """
     md = MarkdownReport("Reporte de Entrenamiento — Spaceship Titanic")
 
@@ -124,10 +122,6 @@ def build_training_md(  # pylint: disable=too-many-arguments,too-many-positional
     md.add_metric("val_accuracy con umbral 0.50", winner_val["val_accuracy"])
     md.add_metric("Ganancia", round(threshold_acc - winner_val["val_accuracy"], 4))
 
-    if ai_insights:
-        md.add_section("Análisis")
-        md.add_text(ai_insights)
-
     md.save(str(REPORTS_DIR / "03_training.md"))
 
 
@@ -142,7 +136,6 @@ def build_training_html(  # pylint: disable=too-many-arguments,too-many-position
     error_tables: dict,
     best_threshold: float,
     threshold_acc: float,
-    ai_insights: str = "",
 ) -> None:
     """Genera reports/03_training.html.
 
@@ -157,7 +150,6 @@ def build_training_html(  # pylint: disable=too-many-arguments,too-many-position
         error_tables: Tablas de tasa de error por segmento.
         best_threshold: Umbral óptimo encontrado.
         threshold_acc: Accuracy con el umbral óptimo.
-        ai_insights: Párrafo de análisis generado por Claude (opcional).
     """
     html = HTMLReport("Reporte de Entrenamiento — Spaceship Titanic")
 
@@ -237,9 +229,5 @@ def build_training_html(  # pylint: disable=too-many-arguments,too-many-position
         f"<b>{threshold_acc:.4f}</b> (vs {winner_acc:.4f} con 0.50, "
         f"ganancia: {threshold_gain:+.4f})."
     )
-
-    if ai_insights:
-        html.add_section("Análisis")
-        html.add_callout(ai_insights, kind="info")
 
     html.save(str(REPORTS_DIR / "03_training.html"))
