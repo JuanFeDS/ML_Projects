@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spaceship-titanic"
+version = "0.1.0"
+description = "Spaceship Titanic — Kaggle classification project"
+requires-python = ">=3.12"
+dependencies = [
+    # Core ML
+    "pandas==2.2.2",
+    "numpy==2.2.6",
+    "scikit-learn==1.8.0",
+    "lightgbm==4.6.0",
+    "xgboost==3.2.0",
+    "catboost==1.2.10",
+    "optuna==4.8.0",
+    "joblib==1.4.0",
+    # Visualización
+    "plotly>=5.0",
+    "matplotlib==3.8.4",
+    "seaborn==0.13.2",
+    # Tracking
+    "mlflow==2.17.2",
+    # Utils
+    "tqdm",
+    "python-dotenv==1.0.1",
+    "anthropic",
+    # Notebooks
+    "ipykernel",
+    "nbformat",
+    "nbconvert",
+    "papermill",
+    "pylint>=4.0.5",
+]
+
+[project.scripts]
+spaceship = "run:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
+ignore_missing_imports = true
+
+[tool.pylint.main]
+min-similarity-lines = 10
+
+[tool.pylint.messages_control]
+min-score = 8.0
+disable = ["missing-module-docstring"]
