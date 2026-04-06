@@ -13,7 +13,7 @@ from src.features.constants import TARGET
 from src.features.feature_sets import DEFAULT_FEATURE_SET, FEATURE_SETS
 from src.models.tracking import mlrun
 from src.pipelines.data_pipeline import load_raw_train, run_ingestion_to_features_pipeline
-from src.reports.feature_reports import build_feature_report
+from src.reports.features.reports import build_feature_report
 
 
 def main():

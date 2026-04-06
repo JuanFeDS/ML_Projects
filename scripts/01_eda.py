@@ -6,6 +6,8 @@ para el dataset Spaceship Titanic, utilizando la lógica modular en src/.
 """
 import pandas as pd
 
+import mlflow
+
 from src.config.settings import TRAIN_RAW
 from src.features.constants import TARGET
 from src.models.tracking import mlrun
@@ -15,7 +17,7 @@ from src.pipelines.eda_pipeline import (
     run_statistical_analysis,
     run_derived_analysis
 )
-from src.reports.eda_reports import build_eda_report
+from src.reports.eda.reports import build_eda_report
 
 def main():
     """Ejecuta el flujo secuencial de EDA."""
@@ -29,22 +31,22 @@ def main():
 
     # Iniciar seguimiento de MLflow (será child run si hay un parent activo)
     with mlrun(run_name="01_EDA") as run:
-        
+
         # 2. Ejecutar análisis por bloques (Receta Transparente)
         print("\n🔍 Ejecutando análisis estadístico...")
-        
+
         # Análisis Básico
         basic_res = run_basic_analysis(df)
         print("  - [X] Dimensiones, tipos y nulos")
-        
+
         # Análisis del Target
         target_res = run_target_analysis(df)
         print(f"  - [X] Balance del target ({TARGET})")
-        
+
         # Tests Estadísticos (Chi2, Mann-Whitney)
         stats_res = run_statistical_analysis(df)
         print("  - [X] Tests estadísticos de variables raw")
-        
+
         # Features Derivadas
         derived_res = run_derived_analysis(df)
         print("  - [X] Impacto de features personalizadas")
@@ -60,9 +62,8 @@ def main():
         # 4. Generación de Reportes Automáticos
         print("\n📄 Generando reportes (.md, .html)...")
         build_eda_report(df, results)
-        
+
         # Registrar metadatos básicos en MLflow
-        import mlflow
         mlflow.log_params({
             "rows": basic_res["shape"][0],
             "cols": basic_res["shape"][1],

@@ -26,7 +26,7 @@ from src.config.settings import (
 from src.features.feature_sets import FEATURE_SETS
 from src.models.predict import generate_submission, preprocess_test
 from src.models.tracking import mlrun
-from src.reports.prediction_report import build_prediction_md
+from src.reports.predictions.reports import build_prediction_md
 
 
 def _load_feature_set(meta_prod: dict):

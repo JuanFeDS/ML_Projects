@@ -9,28 +9,51 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+# Directorio base del proyecto
 BASE_DIR: Path = Path(__file__).resolve().parents[2]
 load_dotenv(BASE_DIR / ".env")
 
+# Directorios de datos
 DATA_RAW_DIR: Path = Path(
-    os.getenv("DATA_RAW_DIR", str(BASE_DIR / "data" / "raw"))
+    os.getenv(
+        "DATA_RAW_DIR", 
+        str(BASE_DIR / "data" / "raw"))
 )
+
+# Directorio de datos procesados
 DATA_PROCESSED_DIR: Path = Path(
-    os.getenv("DATA_PROCESSED_DIR", str(BASE_DIR / "data" / "processed"))
+    os.getenv(
+        "DATA_PROCESSED_DIR", 
+        str(BASE_DIR / "data" / "processed"))
 )
+
+# Directorio de features
 DATA_FEATURES_DIR: Path = BASE_DIR / "data" / "features"
+
+# Directorio de submissions
 SUBMISSIONS_DIR: Path = BASE_DIR / "data" / "submissions"
+
+# Directorio de modelos
 MODELS_DIR: Path = Path(
-    os.getenv("MODELS_DIR", str(BASE_DIR / "models"))
+    os.getenv(
+        "MODELS_DIR", 
+        str(BASE_DIR / "models"))
 )
+
+# Directorio de reports
 REPORTS_DIR: Path = Path(
-    os.getenv("REPORTS_DIR", str(BASE_DIR / "reports"))
+    os.getenv(
+        "REPORTS_DIR", 
+        str(BASE_DIR / "reports"))
 )
+
+# Directorio de docs
 DOCS_DIR: Path = BASE_DIR / "docs"
 
 # Rutas derivadas — archivos concretos
 TRAIN_RAW: Path = DATA_RAW_DIR / "train.csv"
 TEST_RAW: Path = DATA_RAW_DIR / "test.csv"
+
 PRODUCTION_DIR: Path = MODELS_DIR / "production"
 EXPERIMENTS_DIR: Path = MODELS_DIR / "experiments"
 SCALER_PATH: Path = PRODUCTION_DIR / "scaler.pkl"
@@ -40,13 +63,12 @@ MODEL_METADATA: Path = PRODUCTION_DIR / "model_metadata.json"
 # MLflow Tracking
 MLFLOW_TRACKING_URI: str = os.getenv("MLFLOW_TRACKING_URI", f"sqlite:///{BASE_DIR / 'mlflow.db'}")
 MLFLOW_EXPERIMENT_NAME: str = os.getenv("MLFLOW_EXPERIMENT_NAME", "spacechip_titanic")
+
 # Prefijo del run padre al ejecutar el pipeline completo (run.py / run_pipeline.py)
 MLFLOW_PIPELINE_RUN_PREFIX: str = os.getenv(
-    "MLFLOW_PIPELINE_RUN_PREFIX", "Spaceship_Titanic_Full_Pipeline"
+    "MLFLOW_PIPELINE_RUN_PREFIX", 
+    "Spaceship_Titanic_Full_Pipeline"
 )
-
-# Claude API
-ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
 
 
 # ---------------------------------------------------------------------------
