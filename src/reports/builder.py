@@ -12,7 +12,6 @@ from typing import Any, Dict, List, Tuple
 import plotly.graph_objects as go
 import plotly.io as pio
 
-
 class MarkdownReport:
     """Construye un reporte Markdown de forma incremental."""
 
@@ -371,7 +370,7 @@ class ReportFactory:
         Args:
             results: Salida de src.pipelines.training_pipeline.run_training_pipeline.
         """
-        from src.reports.training_report import build_training_html, build_training_md
+        from src.reports.training.reports import build_training_html, build_training_md
 
         build_training_md(
             cv_results=results["cv_results"],
