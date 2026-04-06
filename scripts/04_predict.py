@@ -9,11 +9,6 @@ Ejecutar desde la raiz del proyecto:
     python scripts/04_predict.py
 """
 import json
-import sys
-
-sys.path.insert(0, ".")  # scripts run from project root
-sys.stdout.reconfigure(encoding='utf-8')
-# pylint: disable=wrong-import-position
 
 import mlflow
 import joblib
