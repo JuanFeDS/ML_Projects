@@ -4,11 +4,7 @@
 Este script orquesta el análisis estadístico y la generación de reportes
 para el dataset Spaceship Titanic, utilizando la lógica modular en src/.
 """
-import sys
 import pandas as pd
-
-# Añadir la raíz del proyecto al path
-sys.path.insert(0, ".")
 
 from src.config.settings import TRAIN_RAW
 from src.features.constants import TARGET
