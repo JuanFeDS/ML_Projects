@@ -1,11 +1,14 @@
-# Personal
-MachineLearning/
+# Extensions
 *.csv
 *.txt
 .vscode
 *.xlsx
 *.md
 *.pkl
+
+# Directories
+.claude/
+.cursor/
 
 # MLflow
 mlflow.db
