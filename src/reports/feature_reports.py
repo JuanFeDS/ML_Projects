@@ -9,7 +9,6 @@ import pandas as pd
 from src.config.settings import REPORTS_DIR
 from src.reports.builder import HTMLReport, MarkdownReport
 from src.reports.feature_plots import (
-    age_scale_compare,
     derived_feature_double_bar,
     total_spending_compare,
 )
