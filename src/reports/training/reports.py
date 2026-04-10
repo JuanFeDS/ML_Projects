@@ -29,6 +29,7 @@ def build_training_md(  # pylint: disable=too-many-arguments,too-many-positional
     error_tables: dict,
     best_threshold: float,
     threshold_acc: float,
+    exp_id: str = "000",
 ) -> None:
     """Genera reports/03_training.md.
 
@@ -68,35 +69,34 @@ def build_training_md(  # pylint: disable=too-many-arguments,too-many-positional
     params_str = "\n".join(f"{k}: {v}" for k, v in best_params.items())
     md.add_code(params_str, lang="")
 
-    md.add_section("Evaluacion en Validacion: Tuneado vs Stacking vs MoE")
-    md.add_text(
-        f"Stacking construido con los 3 mejores modelos base: {', '.join(top_names)}. "
-        "MoE entrena un experto CatBoost por segmento (cryo / activo)."
-    )
-    val_df = pd.DataFrame([
+    md.add_section("Evaluacion en Validacion")
+    val_rows = [
         {
-            "Modelo": f"{best_name} (tuneado)",
+            "Modelo": f"{best_name}",
             "val_accuracy": tuned_val["val_accuracy"],
             "val_roc_auc": tuned_val["val_roc_auc"],
-        },
-        {
+        }
+    ]
+    if stacking_val:
+        val_rows.append({
             "Modelo": "Stacking",
             "val_accuracy": stacking_val["val_accuracy"],
             "val_roc_auc": stacking_val["val_roc_auc"],
-        },
-        {
+        })
+    if moe_val:
+        val_rows.append({
             "Modelo": "MoE (CatBoost x segmento)",
             "val_accuracy": moe_val["val_accuracy"],
             "val_roc_auc": moe_val["val_roc_auc"],
-        },
-    ])
-    md.add_table(val_df, index=False)
+        })
+    md.add_table(pd.DataFrame(val_rows), index=False)
 
-    md.add_subsection(f"Classification Report — {best_name} (tuneado)")
+    md.add_subsection(f"Classification Report — {best_name}")
     md.add_code(tuned_val["classification_report"], lang="")
 
-    md.add_subsection("Classification Report — Stacking")
-    md.add_code(stacking_val["classification_report"], lang="")
+    if stacking_val:
+        md.add_subsection("Classification Report — Stacking")
+        md.add_code(stacking_val["classification_report"], lang="")
 
     md.add_section("Modelo Ganador Final")
     md.add_metric("Modelo", winner_name)
@@ -122,7 +122,9 @@ def build_training_md(  # pylint: disable=too-many-arguments,too-many-positional
     md.add_metric("val_accuracy con umbral 0.50", winner_val["val_accuracy"])
     md.add_metric("Ganancia", round(threshold_acc - winner_val["val_accuracy"], 4))
 
-    md.save(str(REPORTS_DIR / "03_training.md"))
+    out_dir = REPORTS_DIR / "training" / f"exp-{exp_id}_{winner_name.replace(' ', '_')}"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    md.save(str(out_dir / "03_training.md"))
 
 
 def build_training_html(  # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -136,6 +138,9 @@ def build_training_html(  # pylint: disable=too-many-arguments,too-many-position
     error_tables: dict,
     best_threshold: float,
     threshold_acc: float,
+    exp_id: str = "000",
+    winner_name: str = "",
+    shap_plots: dict = None,
 ) -> None:
     """Genera reports/03_training.html.
 
@@ -153,34 +158,35 @@ def build_training_html(  # pylint: disable=too-many-arguments,too-many-position
     """
     html = HTMLReport("Reporte de Entrenamiento — Spaceship Titanic")
 
-    winner_acc = max(
-        tuned_val["val_accuracy"],
-        stacking_val["val_accuracy"],
-        moe_val["val_accuracy"],
-    )
-    winner_roc = max(
-        tuned_val["val_roc_auc"],
-        stacking_val["val_roc_auc"],
-        moe_val["val_roc_auc"],
-    )
+    all_accs = [tuned_val["val_accuracy"]]
+    all_rocs = [tuned_val["val_roc_auc"]]
+    if stacking_val:
+        all_accs.append(stacking_val["val_accuracy"])
+        all_rocs.append(stacking_val["val_roc_auc"])
+    if moe_val:
+        all_accs.append(moe_val["val_accuracy"])
+        all_rocs.append(moe_val["val_roc_auc"])
+
+    winner_acc = max(all_accs)
+    winner_roc = max(all_rocs)
     n_models_evaluated = len(cv_results)
 
     html.add_intro(
         f"Se evaluaron <b>{n_models_evaluated} modelos</b> mediante StratifiedKFold (5 folds). "
-        f"El mejor modelo en CV (<b>{best_name}</b>) fue tuneado con Optuna TPE "
-        f"(25 trials) y comparado contra Stacking y un Mixture of Experts (MoE) "
-        f"que entrena un CatBoost especializado por segmento (cryo / activo). "
         f"El modelo ganador alcanza una precision de <b>{winner_acc:.1%}</b> y un "
         f"ROC-AUC de <b>{winner_roc:.4f}</b> en el conjunto de validacion (hold-out 20%)."
     )
-    html.add_metrics_grid([
+    metrics_grid = [
         (f"{winner_acc:.1%}", "val accuracy"),
         (f"{winner_roc:.4f}", "val ROC-AUC"),
-        (f"{tuned_val['val_accuracy']:.1%}", f"{best_name} tuneado"),
-        (f"{stacking_val['val_accuracy']:.1%}", "stacking"),
-        (f"{moe_val['val_accuracy']:.1%}", "MoE"),
+        (f"{tuned_val['val_accuracy']:.1%}", best_name),
         (n_models_evaluated, "modelos evaluados"),
-    ])
+    ]
+    if stacking_val:
+        metrics_grid.append((f"{stacking_val['val_accuracy']:.1%}", "stacking"))
+    if moe_val:
+        metrics_grid.append((f"{moe_val['val_accuracy']:.1%}", "MoE"))
+    html.add_metrics_grid(metrics_grid)
 
     html.add_section("Cross-Validation Accuracy (todos los modelos)")
     html.add_text(
@@ -190,14 +196,18 @@ def build_training_html(  # pylint: disable=too-many-arguments,too-many-position
     )
     html.add_figure(cv_accuracy_bar(cv_results), title="CV Accuracy — todos los modelos")
 
-    html.add_section("Validacion: Tuneado vs Stacking vs MoE")
-    html.add_text(
-        f"Evaluacion final en hold-out (20%). Se compara el modelo tuneado "
-        f"({best_name}), el Stacking y el MoE para seleccionar el ganador."
-    )
-    val_models = [f"{best_name} (tuneado)", "Stacking", "MoE"]
-    val_acc = [tuned_val["val_accuracy"], stacking_val["val_accuracy"], moe_val["val_accuracy"]]
-    val_roc = [tuned_val["val_roc_auc"], stacking_val["val_roc_auc"], moe_val["val_roc_auc"]]
+    html.add_section("Validacion: comparacion de candidatos")
+    val_models = [best_name]
+    val_acc = [tuned_val["val_accuracy"]]
+    val_roc = [tuned_val["val_roc_auc"]]
+    if stacking_val:
+        val_models.append("Stacking")
+        val_acc.append(stacking_val["val_accuracy"])
+        val_roc.append(stacking_val["val_roc_auc"])
+    if moe_val:
+        val_models.append("MoE")
+        val_acc.append(moe_val["val_accuracy"])
+        val_roc.append(moe_val["val_roc_auc"])
     html.add_figure(
         validation_metrics_bar(val_models, val_acc, val_roc),
         title="Val Accuracy y ROC-AUC",
@@ -230,4 +240,22 @@ def build_training_html(  # pylint: disable=too-many-arguments,too-many-position
         f"ganancia: {threshold_gain:+.4f})."
     )
 
-    html.save(str(REPORTS_DIR / "03_training.html"))
+    # ------------------------------------------------------------------
+    # Seccion SHAP (solo si se calcularon plots)
+    # ------------------------------------------------------------------
+    if shap_plots:
+        html.add_section("Analisis SHAP")
+        html.add_text(
+            "Los SHAP values (SHapley Additive exPlanations) miden la contribucion "
+            "de cada feature a cada prediccion individual, con signo y magnitud."
+        )
+        if shap_plots.get("summary_bar"):
+            html.add_image(shap_plots["summary_bar"], title="Importancia global (media |SHAP|)")
+        if shap_plots.get("beeswarm"):
+            html.add_image(shap_plots["beeswarm"], title="Distribucion del impacto por feature")
+        if shap_plots.get("waterfall_comparison"):
+            html.add_image(shap_plots["waterfall_comparison"], title="Waterfall — peor vs mejor prediccion")
+
+    out_dir = REPORTS_DIR / "training" / f"exp-{exp_id}_{winner_name.replace(' ', '_')}"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    html.save(str(out_dir / "03_training.html"))

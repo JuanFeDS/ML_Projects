@@ -303,10 +303,11 @@ def build_eda_report(df: pd.DataFrame, analysis_results: Dict[str, Any]):
     # ------------------------------------------------------------------
     # Guardar
     # ------------------------------------------------------------------
-    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    md.save(str(REPORTS_DIR / "01_eda.md"))
-    html.save(str(REPORTS_DIR / "01_eda.html"))
+    out_dir = REPORTS_DIR / "eda"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    md.save(str(out_dir / "01_eda.md"))
+    html.save(str(out_dir / "01_eda.html"))
 
     write_data_quality_doc(df, TARGET, str(DOCS_DIR / "data" / "data_quality.md"))
 
-    print(f"✅ Reportes generados en {REPORTS_DIR}")
+    print(f"[OK] Reportes generados en {out_dir}")
