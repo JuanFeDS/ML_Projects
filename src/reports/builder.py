@@ -625,6 +625,24 @@ class HTMLReport:
         )
         return self
 
+    def add_image(self, b64_png: str, title: str = "") -> "HTMLReport":
+        """Embebe una imagen PNG en base64 dentro del reporte.
+
+        Util para incrustar graficos matplotlib (ej. SHAP plots) sin
+        depender de archivos externos.
+
+        Args:
+            b64_png: Cadena base64 del PNG (sin prefijo data URI).
+            title: Titulo descriptivo de la imagen.
+        """
+        label_html = f'<div class="fig-label">{title}</div>' if title else ""
+        self._blocks.append(
+            f'<div class="fig-wrap">{label_html}'
+            f'<img src="data:image/png;base64,{b64_png}" '
+            f'style="max-width:100%;height:auto;" /></div>'
+        )
+        return self
+
     def save(self, path: str) -> None:
         """Guarda el reporte HTML en disco.
 
@@ -772,6 +790,8 @@ class ReportFactory:
         """
         from src.reports.training.reports import build_training_html, build_training_md  # pylint: disable=import-outside-toplevel
 
+        exp_id = results["metadata"]["exp_id"]
+        winner_name = results["winner_name"]
         build_training_md(
             cv_results=results["cv_results"],
             best_name=results["best_name"],
@@ -779,13 +799,14 @@ class ReportFactory:
             tuned_val=results["tuned_val"],
             stacking_val=results["stacking_val"],
             moe_val=results["moe_val"],
-            winner_name=results["winner_name"],
+            winner_name=winner_name,
             winner_val=results["winner_val"],
             top_names=results["top_names"],
             fs_name=results["fs_name"],
             error_tables=results["error_tables"],
             best_threshold=results["best_threshold"],
             threshold_acc=results["threshold_acc"],
+            exp_id=exp_id,
         )
         build_training_html(
             cv_results=results["cv_results"],
@@ -798,4 +819,7 @@ class ReportFactory:
             error_tables=results["error_tables"],
             best_threshold=results["best_threshold"],
             threshold_acc=results["threshold_acc"],
+            exp_id=exp_id,
+            winner_name=winner_name,
+            shap_plots=results.get("shap_plots", {}),
         )

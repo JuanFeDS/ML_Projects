@@ -75,6 +75,7 @@ def build_feature_report(df_raw: pd.DataFrame, results: Dict[str, Any], fs_name:
         pass
 
     # Guardar Reportes
-    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    md.save(str(REPORTS_DIR / "02_features.md"))
-    html.save(str(REPORTS_DIR / "02_features.html"))
+    out_dir = REPORTS_DIR / "features" / fs_name
+    out_dir.mkdir(parents=True, exist_ok=True)
+    md.save(str(out_dir / "02_features.md"))
+    html.save(str(out_dir / "02_features.html"))
