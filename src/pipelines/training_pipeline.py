@@ -1,8 +1,8 @@
 """
-Orquestador del pipeline de entrenamiento y selección de modelos.
+Orquestador del pipeline de entrenamiento y seleccion de modelos.
 
 Carga datos escalados, ejecuta CV / tuning / ensambles, gestiona artefactos
-y documentación en docs/. Los reportes operacionales (reports/) se emiten
+y documentacion en docs/. Los reportes operacionales (reports/) se emiten
 via ReportFactory a partir del dict retornado.
 """
 from __future__ import annotations
@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import joblib
 import mlflow
@@ -30,7 +30,7 @@ from src.config.settings import (
 )
 from src.features.constants import TARGET
 from src.features.feature_sets import FEATURE_SETS
-from src.models.catalogue import MOE_BASE_ESTIMATOR, MODELS, PARAM_SPACES
+from src.models.catalogue import MODELS, PARAM_SPACES
 from src.models.tracking import mlrun
 from src.models.training import (
     analyze_errors,
@@ -66,13 +66,13 @@ def _create_git_tag(exp_id: str, fs_name: str, val_accuracy: float) -> None:
         subprocess.run(
             ["git", "tag", tag], check=True, stderr=subprocess.DEVNULL
         )
-        print(f"  🏷️  Git tag creado: {tag}")
+        print(f"  [TAG] Git tag creado: {tag}")
     except subprocess.CalledProcessError:
-        print(f"  ⚠️  No se pudo crear git tag '{tag}' (¿ya existe?)")
+        print(f"  [WARN] No se pudo crear git tag '{tag}' (ya existe?)")
 
 
 def _log_mlflow_training_flat(fs_name: str, metadata: Dict[str, Any], winner_name: str) -> None:
-    """Registra parámetros y métricas escalares (MLflow no acepta dicts anidados)."""
+    """Registra parametros y metricas escalares (MLflow no acepta dicts anidados)."""
     mlflow.set_tag("feature_set", fs_name)
     mlflow.set_tag("git_commit", _get_git_commit())
     mlflow.log_param("feature_set", fs_name)
@@ -86,20 +86,33 @@ def _log_mlflow_training_flat(fs_name: str, metadata: Dict[str, Any], winner_nam
         mlflow.log_param(f"bp_{k}", str(v)[:250])
 
 
-def run_training_pipeline(fs_name: str) -> Dict[str, Any]:
+def run_training_pipeline(  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+    fs_name: str,
+    model_name: Optional[str] = None,
+    tune: bool = True,
+    build_stack: bool = True,
+    build_moe_flag: bool = True,
+    compute_shap: bool = False,
+) -> Dict[str, Any]:
     """Ejecuta entrenamiento completo: modelos, artefactos, docs y tracking MLflow.
 
     Args:
         fs_name: Nombre del feature set (ej. fs-001_baseline).
+        model_name: Si se indica, entrena solo ese modelo (sin comparacion multiple).
+            Si es None, compara todos los modelos del catalogo y elige el mejor.
+        tune: Si True, ejecuta tuning de hiperparametros con Optuna.
+        build_stack: Si True, construye un StackingClassifier con los top-3 modelos.
+        build_moe_flag: Si True, construye un Mixture of Experts.
+        compute_shap: Si True, calcula SHAP values y agrega plots al reporte.
 
     Returns:
-        Diccionario con modelos, métricas y tablas para ReportFactory y tests.
+        Diccionario con modelos, metricas y tablas para ReportFactory y tests.
     """
     fs = FEATURE_SETS[fs_name]
     train_scaled_path = get_train_scaled(fs_name)
     scaler_pkl_path = get_scaler_path(fs_name)
 
-    print("📂 Cargando datos...")
+    print("[...] Cargando datos...")
     df = pd.read_csv(train_scaled_path)
     print(f"  Dataset: {df.shape[0]:,} filas x {df.shape[1]} columnas")
 
@@ -114,75 +127,95 @@ def run_training_pipeline(fs_name: str) -> Dict[str, Any]:
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
     with mlrun(f"03_Train_{fs_name}"):
-        print("\n📊 Evaluando modelos con CV...")
-        cv_results = evaluate_models(MODELS, x_train, y_train, cv)
+        # ------------------------------------------------------------------
+        # Seleccion de modelos a evaluar
+        # ------------------------------------------------------------------
+        _NOT_TUNABLE = {"Baseline"}
+
+        models_to_eval = {model_name: MODELS[model_name]} if model_name else MODELS
+
+        print(f"\n[CV] Evaluando modelos: {list(models_to_eval.keys())}")
+        cv_results = evaluate_models(models_to_eval, x_train, y_train, cv)
         print(cv_results.to_string())
 
-        _NOT_TUNABLE = {"Baseline"}
-        best_name = next(
+        best_name = model_name if model_name else next(
             n for n in cv_results.index
             if n not in _NOT_TUNABLE and n in PARAM_SPACES
         )
-        print(f"  Mejor modelo CV (tunable): {best_name}")
-
         best_cv_score = float(cv_results.loc[best_name, "cv_accuracy_mean"])
+        print(f"  Modelo seleccionado: {best_name} | CV accuracy: {best_cv_score:.4f}")
 
-        print(f"\n🔧 Tuneando {best_name} (n_iter=25)...")
-        tuned_model, best_params, tuned_cv_score = tune_model(
-            MODELS[best_name], PARAM_SPACES[best_name], x_train, y_train, cv, n_iter=25
-        )
-        print(f"  Mejor score CV tuneado: {tuned_cv_score:.4f}")
-        print(f"  Mejores hiperparametros: {best_params}")
+        # ------------------------------------------------------------------
+        # Tuning
+        # ------------------------------------------------------------------
+        best_params: dict = {}
+        if tune and best_name in PARAM_SPACES:
+            print(f"\n[TUNE] Tuneando {best_name} (n_iter=25)...")
+            tuned_model, best_params, tuned_cv_score = tune_model(
+                MODELS[best_name], PARAM_SPACES[best_name], x_train, y_train, cv, n_iter=25
+            )
+            print(f"  Mejor CV tuneado: {tuned_cv_score:.4f} | Params: {best_params}")
+        else:
+            tuned_model = MODELS[best_name]
+            print(f"\n[SKIP] Tuning omitido -- usando params por defecto de {best_name}")
 
-        print("\n🏗️  Construyendo Stacking...")
-        top_names = [
-            n for n in cv_results.index if n != "Baseline"
-        ][:3]
-        print(f"  Base estimators: {top_names}")
-        base_estimators = [(name, MODELS[name]) for name in top_names]
-        stacking_model, stacking_cv_score = build_stacking(
-            base_estimators, x_train, y_train, cv
-        )
-        print(f"  Stacking CV accuracy: {stacking_cv_score:.4f}")
+        # ------------------------------------------------------------------
+        # Stacking (solo si se comparan multiples modelos)
+        # ------------------------------------------------------------------
+        stacking_model = None
+        stacking_val: dict = {}
+        top_names = [best_name]
+        if build_stack and not model_name:
+            print("\n[STACK] Construyendo Stacking...")
+            top_names = [n for n in cv_results.index if n != "Baseline"][:3]
+            print(f"  Base estimators: {top_names}")
+            base_estimators = [(name, MODELS[name]) for name in top_names]
+            stacking_model, stacking_cv_score = build_stacking(
+                base_estimators, x_train, y_train, cv
+            )
+            stacking_val = evaluate_on_validation(
+                stacking_model, x_train, y_train, x_val, y_val
+            )
+            print(f"  Stacking -> val_acc={stacking_val['val_accuracy']:.4f} | roc_auc={stacking_val['val_roc_auc']:.4f}")
 
-        print("\n🔀 Construyendo Mixture of Experts (experto: tuneado)...")
-        moe_model, moe_cv_score = build_moe(tuned_model, x_train, y_train, cv)
-        sizes = moe_model.get_segment_sizes(x_train)
-        print(f"  Segmento cryo:   {sizes['cryo']:,} muestras")
-        print(f"  Segmento activo: {sizes['active']:,} muestras")
-        print(f"  MoE CV accuracy: {moe_cv_score:.4f}")
+        # ------------------------------------------------------------------
+        # Mixture of Experts
+        # ------------------------------------------------------------------
+        moe_model = None
+        moe_val: dict = {}
+        if build_moe_flag:
+            print("\n[MOE] Construyendo Mixture of Experts...")
+            moe_model, moe_cv_score = build_moe(tuned_model, x_train, y_train, cv)
+            sizes = moe_model.get_segment_sizes(x_train)
+            moe_val = evaluate_on_validation(moe_model, x_train, y_train, x_val, y_val)
+            print(f"  Segmento cryo: {sizes['cryo']:,} | activo: {sizes['active']:,}")
+            print(f"  MoE -> val_acc={moe_val['val_accuracy']:.4f} | roc_auc={moe_val['val_roc_auc']:.4f}")
 
-        print("\n🧪 Evaluando en validacion...")
+        # ------------------------------------------------------------------
+        # Evaluacion en validacion del modelo principal (siempre)
+        # ------------------------------------------------------------------
+        print("\n[EVAL] Evaluando en validacion...")
         tuned_val = evaluate_on_validation(tuned_model, x_train, y_train, x_val, y_val)
-        stacking_val = evaluate_on_validation(
-            stacking_model, x_train, y_train, x_val, y_val
-        )
-        moe_val = evaluate_on_validation(moe_model, x_train, y_train, x_val, y_val)
-        print(
-            f"  Tuneado  -> val_acc={tuned_val['val_accuracy']:.4f} | "
-            f"roc_auc={tuned_val['val_roc_auc']:.4f}"
-        )
-        print(
-            f"  Stacking -> val_acc={stacking_val['val_accuracy']:.4f} | "
-            f"roc_auc={stacking_val['val_roc_auc']:.4f}"
-        )
-        print(
-            f"  MoE      -> val_acc={moe_val['val_accuracy']:.4f} | "
-            f"roc_auc={moe_val['val_roc_auc']:.4f}"
-        )
+        print(f"  {best_name} -> val_acc={tuned_val['val_accuracy']:.4f} | roc_auc={tuned_val['val_roc_auc']:.4f}")
 
-        candidates = [
-            (f"{best_name} (tuneado)", tuned_model, tuned_val),
-            ("Stacking", stacking_model, stacking_val),
-            ("MoE", moe_model, moe_val),
-        ]
+        # ------------------------------------------------------------------
+        # Seleccion del ganador
+        # ------------------------------------------------------------------
+        candidates = [(best_name, tuned_model, tuned_val)]
+        if stacking_val:
+            candidates.append(("Stacking", stacking_model, stacking_val))
+        if moe_val:
+            candidates.append(("MoE", moe_model, moe_val))
+
         winner_name, winner_model, winner_val = max(
             candidates, key=lambda t: t[2]["val_accuracy"]
         )
+        print(f"\n[WIN] Modelo ganador: {winner_name} | val_acc={winner_val['val_accuracy']:.4f}")
 
-        print(f"\n🏆 Modelo ganador: {winner_name}")
-
-        print("\n🔍 Analizando errores del modelo ganador...")
+        # ------------------------------------------------------------------
+        # Analisis de errores y umbral optimo
+        # ------------------------------------------------------------------
+        print("\n[ERR] Analizando errores del modelo ganador...")
         y_pred_winner = winner_val["y_pred"]
         y_proba_winner = winner_val["y_proba"]
         error_tables = analyze_errors(
@@ -192,19 +225,22 @@ def run_training_pipeline(fs_name: str) -> Dict[str, Any]:
             print(f"\n  Error rate por {seg}:")
             print(tbl.to_string(index=False))
 
-        print("\n⚖️  Optimizando umbral de clasificacion...")
+        print("\n[THR] Optimizando umbral de clasificacion...")
         best_threshold, threshold_acc = optimize_threshold(y_val, y_proba_winner)
         gain = round(threshold_acc - winner_val["val_accuracy"], 4)
-        print(f"  Umbral optimo:  {best_threshold:.4f} → val_accuracy: {threshold_acc:.4f}")
-        print(f"  Default (0.50): val_accuracy: {winner_val['val_accuracy']:.4f}")
-        print(f"  Ganancia:       {gain:+.4f}")
+        print(f"  Umbral optimo: {best_threshold:.4f} -> val_accuracy: {threshold_acc:.4f} (ganancia: {gain:+.4f})")
 
-        print("🔄 Re-entrenando sobre x_train completo...")
+        # ------------------------------------------------------------------
+        # Re-entrenamiento sobre train completo
+        # ------------------------------------------------------------------
+        print("\n[FIT] Re-entrenando sobre x_train completo...")
         winner_model.fit(x_train, y_train)
 
+        # ------------------------------------------------------------------
+        # Metadata del experimento
+        # ------------------------------------------------------------------
         log_path = str(DOCS_DIR / "model" / "experimentation_log.md")
         exp_id = get_next_exp_id(log_path)
-
         feature_names = x_train.columns.tolist()
 
         features_added: list = []
@@ -247,12 +283,15 @@ def run_training_pipeline(fs_name: str) -> Dict[str, Any]:
             "feature_names": feature_names,
         }
 
+        # ------------------------------------------------------------------
+        # Artefactos, log y card
+        # ------------------------------------------------------------------
         promoted = False
         current_best_acc: float | None = None
 
         if is_duplicate_experiment(metadata, log_path) and MODEL_PATH.exists():
             print(
-                "  ⏭️  Experimento identico ya registrado — "
+                "\n[SKIP] Experimento identico ya registrado -- "
                 "se omiten artefacto, log y card."
             )
         else:
@@ -260,15 +299,14 @@ def run_training_pipeline(fs_name: str) -> Dict[str, Any]:
             safe_name = winner_name.replace(" ", "_").replace("(", "").replace(")", "")
             exp_artifact = EXPERIMENTS_DIR / f"exp-{exp_id}_{safe_name}.pkl"
             joblib.dump(winner_model, exp_artifact)
-            print(f"  💾 Artefacto guardado: {exp_artifact}")
+            print(f"  [SAVE] Artefacto: {exp_artifact}")
 
             if MODEL_METADATA.exists():
                 with open(MODEL_METADATA, encoding="utf-8") as f:
                     current_meta = json.load(f)
                 current_best_acc = current_meta.get("val_accuracy")
 
-            new_acc = effective_acc
-            promoted = current_best_acc is None or new_acc > current_best_acc
+            promoted = current_best_acc is None or effective_acc > current_best_acc
 
             if promoted:
                 PRODUCTION_DIR.mkdir(parents=True, exist_ok=True)
@@ -278,11 +316,11 @@ def run_training_pipeline(fs_name: str) -> Dict[str, Any]:
                 with open(MODEL_METADATA, "w", encoding="utf-8") as f:
                     json.dump(metadata, f, indent=2, default=str)
                 label = "NUEVO MEJOR MODELO" if current_best_acc else "primer modelo"
-                print(f"  🚀 [{label}] Promovido a produccion: {MODEL_PATH}")
+                print(f"  [PROD] [{label}] Promovido a produccion: {MODEL_PATH}")
                 _create_git_tag(exp_id, fs_name, effective_acc)
             else:
                 print(
-                    f"  ❌ No promovido — val_accuracy {new_acc:.4f} "
+                    f"  [--] No promovido -- val_accuracy {effective_acc:.4f} "
                     f"no supera {current_best_acc:.4f} (produccion actual)"
                 )
 
@@ -313,8 +351,23 @@ def run_training_pipeline(fs_name: str) -> Dict[str, Any]:
                 )
 
         _log_mlflow_training_flat(fs_name, metadata, winner_name)
-
         REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+
+        # ------------------------------------------------------------------
+        # SHAP (opcional)
+        # ------------------------------------------------------------------
+        shap_plots: dict = {}
+        if compute_shap:
+            from src.reports.training.shap_plots import compute_shap_plots  # pylint: disable=import-outside-toplevel
+            print("\n[SHAP] Generando analisis SHAP...")
+            shap_plots = compute_shap_plots(
+                model=winner_model,
+                x_train=x_train,
+                x_val=x_val,
+                y_val=y_val,
+                y_proba=winner_val["y_proba"],
+                feature_names=feature_names,
+            )
 
         return {
             "fs_name": fs_name,
@@ -334,4 +387,5 @@ def run_training_pipeline(fs_name: str) -> Dict[str, Any]:
             "top_names": top_names,
             "metadata": metadata,
             "promoted": promoted,
+            "shap_plots": shap_plots,
         }
