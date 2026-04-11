@@ -625,6 +625,15 @@ class HTMLReport:
         )
         return self
 
+    def add_html(self, raw_html: str) -> "HTMLReport":
+        """Inserta HTML arbitrario directamente en el cuerpo del reporte.
+
+        Args:
+            raw_html: Fragmento HTML valido a insertar sin modificaciones.
+        """
+        self._blocks.append(raw_html)
+        return self
+
     def add_image(self, b64_png: str, title: str = "") -> "HTMLReport":
         """Embebe una imagen PNG en base64 dentro del reporte.
 
