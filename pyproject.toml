@@ -17,7 +17,7 @@ dependencies = [
     "catboost==1.2.10",
     "optuna==4.8.0",
     "joblib==1.4.0",
-    # Visualización
+    # Visualizacion
     "plotly>=5.0",
     "matplotlib==3.8.4",
     "seaborn==0.13.2",
@@ -26,7 +26,6 @@ dependencies = [
     # Utils
     "tqdm",
     "python-dotenv==1.0.1",
-    "anthropic",
     # Notebooks
     "ipykernel",
     "nbformat",
@@ -54,12 +53,24 @@ profile = "black"
 line_length = 88
 
 [tool.mypy]
-strict = true
 python_version = "3.12"
 ignore_missing_imports = true
+warn_return_any = true
+warn_unused_ignores = true
+# strict desactivado: catboost/lightgbm/xgboost no tienen stubs completos
 
 [tool.pylint.main]
 min-similarity-lines = 10
 
 [tool.pylint.messages_control]
 disable = ["missing-module-docstring"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "pytest-cov>=7.1.0",
+]
