@@ -93,6 +93,7 @@ def run_training_pipeline(  # pylint: disable=too-many-locals,too-many-branches,
     build_stack: bool = True,
     build_moe_flag: bool = True,
     compute_shap: bool = False,
+    n_iter: int = 25,
 ) -> Dict[str, Any]:
     """Ejecuta entrenamiento completo: modelos, artefactos, docs y tracking MLflow.
 
@@ -150,9 +151,9 @@ def run_training_pipeline(  # pylint: disable=too-many-locals,too-many-branches,
         # ------------------------------------------------------------------
         best_params: dict = {}
         if tune and best_name in PARAM_SPACES:
-            print(f"\n[TUNE] Tuneando {best_name} (n_iter=25)...")
+            print(f"\n[TUNE] Tuneando {best_name} (n_iter={n_iter})...")
             tuned_model, best_params, tuned_cv_score = tune_model(
-                MODELS[best_name], PARAM_SPACES[best_name], x_train, y_train, cv, n_iter=25
+                MODELS[best_name], PARAM_SPACES[best_name], x_train, y_train, cv, n_iter=n_iter
             )
             print(f"  Mejor CV tuneado: {tuned_cv_score:.4f} | Params: {best_params}")
         else:

@@ -49,6 +49,12 @@ def main() -> None:
         action="store_true",
         help="Calcular y agregar analisis SHAP al reporte HTML.",
     )
+    parser.add_argument(
+        "--n-iter",
+        type=int,
+        default=25,
+        help="Numero de trials de Optuna para el tuning (default: 25).",
+    )
     args = parser.parse_args()
 
     print("=" * 60)
@@ -68,6 +74,7 @@ def main() -> None:
         build_stack=not args.no_stack,
         build_moe_flag=not args.no_moe,
         compute_shap=args.shap,
+        n_iter=args.n_iter,
     )
     ReportFactory.emit_training_reports(results)
 
