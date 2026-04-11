@@ -9,6 +9,7 @@
 # Directories
 .claude/
 .cursor/
+reports/
 
 # MLflow
 mlflow.db
