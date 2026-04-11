@@ -1,5 +1,5 @@
 """Tests de selección de etapas del orquestador."""
-from src.utils.orchestration import (
+from src.pipelines.orchestration import (
     PIPELINE_STAGES,
     select_pipeline_scripts,
 )
