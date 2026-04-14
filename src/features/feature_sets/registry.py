@@ -26,6 +26,8 @@ from src.features.feature_sets.pipelines import (
     _pipeline_fs010,
     _pipeline_fs011,
     _pipeline_fs013,
+    _pipeline_fs014,
+    _pipeline_fs015,
 )
 
 # ---------------------------------------------------------------------------
@@ -179,6 +181,70 @@ FEATURE_SETS: dict = {
         test_pipeline=lambda df: _pipeline_fs013(df, impute_age=True),
         numeric_features=_FS004_NUMERIC + [
             "GroupAllCryo", "GroupAnyCryo", "SpendShare", "GroupSpendOthers_Log",
+        ],
+        categorical_cols=_FS004_CATEGORICAL,
+        features_to_drop=_FS004_DROP,
+        target_encode_cols=_FS004_TARGET_ENCODE,
+    ),
+
+    "fs-016_transductive": FeatureSetConfig(
+        description=(
+            "fs-015 con imputación transductiva: train.csv + test.csv se combinan "
+            "antes de aplicar apply_domain_rules e impute_age_by_group, de modo que "
+            "grupos con miembros en ambos splits comparten información. "
+            "Requiere ejecutar scripts/00_transductive_impute.py primero y pasar "
+            "--train-path data/processed/train_transductive.csv a 02_features.py. "
+            "Misma dimensionalidad que fs-004/fs-015."
+        ),
+        parent="fs-015_domain_imputation",
+        pipeline=lambda df: _pipeline_fs015(df),
+        test_pipeline=lambda df: _pipeline_fs015(df, impute_age=True),
+        numeric_features=_FS004_NUMERIC,
+        categorical_cols=_FS004_CATEGORICAL,
+        features_to_drop=_FS004_DROP,
+        target_encode_cols=_FS004_TARGET_ENCODE,
+    ),
+
+    "fs-015_domain_imputation": FeatureSetConfig(
+        description=(
+            "fs-004 con imputación agresiva por reglas de dominio antes de engineering. "
+            "apply_domain_rules resuelve por inferencia: "
+            "HomePlanet NaN por grupo (100% homogéneo → 0 ambigüedad), "
+            "HomePlanet NaN por Deck (A/B/C→Europa, G→Earth), "
+            "Deck/Side NaN por grupo, "
+            "CryoSleep NaN con gasto>0 → False, "
+            "spending NaN con CryoSleep=True → 0. "
+            "Misma dimensionalidad que fs-004 — diferencia es calidad de imputación."
+        ),
+        parent="fs-004_target_encoding",
+        pipeline=lambda df: _pipeline_fs015(df),
+        test_pipeline=lambda df: _pipeline_fs015(df, impute_age=True),
+        numeric_features=_FS004_NUMERIC,
+        categorical_cols=_FS004_CATEGORICAL,
+        features_to_drop=_FS004_DROP,
+        target_encode_cols=_FS004_TARGET_ENCODE,
+    ),
+
+    "fs-014_spend_clusters": FeatureSetConfig(
+        description=(
+            "fs-013 + 6 features derivadas del EDA 2026-04-12: "
+            "EntertainmentSpend_Log (FoodCourt+VRDeck+Spa, r inter=0.42-0.46), "
+            "ComfortSpend_Log (RoomService+ShoppingMall, r=0.36), "
+            "EntVsComfort_Ratio, "
+            "IsExtremeSpender (any service > p99 training), "
+            "AgeVsPlanetMedian (Earth=23/Europa=33/Mars=28), "
+            "GroupCryoSegment ordinal 0-3 "
+            "(NoCryo 33.9% / Solo 45.2% / AnyCryo 60.4% / AllCryo 92.2%)."
+        ),
+        parent="fs-013_group_context",
+        pipeline=lambda df: _pipeline_fs014(df),
+        test_pipeline=lambda df: _pipeline_fs014(df, impute_age=True),
+        numeric_features=_FS004_NUMERIC + [
+            # heredadas de fs-013
+            "GroupAllCryo", "GroupAnyCryo", "SpendShare", "GroupSpendOthers_Log",
+            # nuevas fs-014
+            "EntertainmentSpend_Log", "ComfortSpend_Log", "EntVsComfort_Ratio",
+            "IsExtremeSpender", "AgeVsPlanetMedian", "GroupCryoSegment",
         ],
         categorical_cols=_FS004_CATEGORICAL,
         features_to_drop=_FS004_DROP,

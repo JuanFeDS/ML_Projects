@@ -28,6 +28,7 @@ from src.features.engineering.derived import (
     create_group_context_features,
     create_group_spending_features,
     create_solo_interaction_features,
+    create_spend_cluster_features,
     create_structural_context_features,
 )
 
@@ -92,6 +93,37 @@ def _pipeline_fs013(df: pd.DataFrame, *, impute_age: bool = False) -> pd.DataFra
     df_out = impute_age_by_group(df_out)
     df_out = create_age_features(df_out)
     df_out = create_group_context_features(df_out)
+    df_out = handle_missing_values_spaceship(df_out, impute_age=impute_age)
+    return _add_group_size(df_out)
+
+
+def _pipeline_fs015(df: pd.DataFrame, *, impute_age: bool = False) -> pd.DataFrame:
+    """fs-015: fs-004 + imputación agresiva por reglas de dominio antes de engineering.
+
+    La diferencia respecto a fs-004 es el orden: apply_domain_rules corre antes de
+    create_spending_features, de modo que los NaN de HomePlanet/CryoSleep/Deck/Side
+    se resuelven por inferencia (grupo, deck→planeta, gasto>0) en lugar de caer
+    en la categoría 'Unknown'. Misma dimensionalidad que fs-004.
+    """
+    df_out = extract_cabin_features(df)
+    df_out = extract_group_features(df_out)
+    df_out = apply_domain_rules(df_out)        # imputa antes de crear features
+    df_out = create_spending_features(df_out)
+    df_out = impute_age_by_group(df_out)
+    df_out = create_age_features(df_out)
+    df_out = handle_missing_values_spaceship(df_out, impute_age=impute_age)
+    return _add_group_size(df_out)
+
+
+def _pipeline_fs014(df: pd.DataFrame, *, impute_age: bool = False) -> pd.DataFrame:
+    """fs-014: fs-013 + clusters de gasto + GroupCryoSegment + AgeVsPlanetMedian + IsExtremeSpender."""
+    df_out = extract_cabin_features(df)
+    df_out = extract_group_features(df_out)
+    df_out = create_spending_features(df_out)
+    df_out = impute_age_by_group(df_out)
+    df_out = create_age_features(df_out)
+    df_out = create_group_context_features(df_out)     # GroupAllCryo, GroupAnyCryo, SpendShare, GroupSpendOthers_Log
+    df_out = create_spend_cluster_features(df_out)     # clusters + GroupCryoSegment + AgeVsPlanetMedian + IsExtremeSpender
     df_out = handle_missing_values_spaceship(df_out, impute_age=impute_age)
     return _add_group_size(df_out)
 

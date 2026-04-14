@@ -281,6 +281,108 @@ def create_child_route_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
+# fs-014
+# ---------------------------------------------------------------------------
+
+# p99 calculados sobre el training set (8693 registros) para aplicar en test
+# sin data leakage. Fuente: EDA run 2026-04-12.
+_P99_THRESHOLDS: dict = {
+    "RoomService":  3096.2,
+    "FoodCourt":    8033.3,
+    "ShoppingMall": 2333.4,
+    "Spa":          5390.1,
+    "VRDeck":       5646.7,
+}
+
+# Medianas de Age por HomePlanet (training set). Fuente: EDA run 2026-04-12.
+_PLANET_AGE_MEDIAN: dict = {
+    "Earth":   23.0,
+    "Europa":  33.0,
+    "Mars":    28.0,
+}
+_GLOBAL_AGE_MEDIAN: float = 27.0  # fallback para HomePlanet desconocido
+
+
+def create_spend_cluster_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Crea features de clusters de gasto y contexto grupal ampliado (fs-014).
+
+    Motivación estadística (EDA 2026-04-12):
+    - FoodCourt ↔ VRDeck: r=0.46 | Spa ↔ FoodCourt: r=0.42 | Spa ↔ VRDeck: r=0.38
+      → cluster de entretenimiento (FoodCourt + VRDeck + Spa).
+    - RoomService ↔ ShoppingMall: r=0.36 → cluster de confort, comportamiento diferente.
+    - ~86 pasajeros por encima del p99 por servicio (consistente en los 5 servicios).
+    - Earth median Age=23, Europa=33, Mars=28 → residual respecto al planeta.
+    - GroupCryoSegment (4 niveles): AllCryo 92.2% / AnyCryo 60.4% / Solo 45.2% / NoCryo 33.9%
+      captura el gradiente completo mejor que dos binarios independientes.
+
+    Requiere extract_group_features y create_spending_features aplicados antes,
+    y CryoSleep disponible en crudo (antes de handle_missing_values_spaceship).
+
+    Features:
+        EntertainmentSpend_Log: log1p(FoodCourt + VRDeck + Spa).
+        ComfortSpend_Log: log1p(RoomService + ShoppingMall).
+        EntVsComfort_Ratio: EntSpend / (ComfortSpend + 1).
+        IsExtremeSpender: 1 si algún servicio supera el p99 de entrenamiento.
+        AgeVsPlanetMedian: Age - mediana de Age del HomePlanet.
+        GroupCryoSegment: ordinal 0-3 (NoCryo=0, Solo=1, AnyCryo=2, AllCryo=3).
+
+    Args:
+        df: DataFrame con TravelGroup, CryoSleep, HomePlanet, Age y columnas de gasto.
+
+    Returns:
+        DataFrame con las 6 features añadidas.
+    """
+    df_copy = df.copy()
+
+    # --- Clusters de gasto ---
+    entertainment = (
+        df_copy["FoodCourt"].fillna(0)
+        + df_copy["VRDeck"].fillna(0)
+        + df_copy["Spa"].fillna(0)
+    )
+    comfort = (
+        df_copy["RoomService"].fillna(0)
+        + df_copy["ShoppingMall"].fillna(0)
+    )
+    df_copy["EntertainmentSpend_Log"] = np.log1p(entertainment)
+    df_copy["ComfortSpend_Log"] = np.log1p(comfort)
+    # log-ratio para evitar valores extremos cuando comfort ≈ 0
+    df_copy["EntVsComfort_Ratio"] = np.log1p(entertainment) - np.log1p(comfort)
+
+    # --- Extreme spender (p99 del training set) ---
+    is_extreme = pd.Series(False, index=df_copy.index)
+    for col, threshold in _P99_THRESHOLDS.items():
+        if col in df_copy.columns:
+            is_extreme = is_extreme | (df_copy[col].fillna(0) > threshold)
+    df_copy["IsExtremeSpender"] = is_extreme.astype(int)
+
+    # --- Age vs mediana del planeta ---
+    planet_median = (
+        df_copy["HomePlanet"]
+        .map(_PLANET_AGE_MEDIAN)
+        .fillna(_GLOBAL_AGE_MEDIAN)
+    )
+    df_copy["AgeVsPlanetMedian"] = df_copy["Age"].fillna(_GLOBAL_AGE_MEDIAN) - planet_median
+
+    # --- GroupCryoSegment (ordinal 0-3) ---
+    cryo_int = _cryo_to_int(df_copy["CryoSleep"])
+    df_copy["_cryo_int"] = cryo_int
+    group_min = df_copy.groupby("TravelGroup")["_cryo_int"].transform("min")
+    group_max = df_copy.groupby("TravelGroup")["_cryo_int"].transform("max")
+    is_solo = (df_copy.groupby("TravelGroup")["TravelGroup"].transform("count") == 1)
+
+    segment = pd.Series(0, index=df_copy.index, dtype=int)  # NoCryo default
+    segment[is_solo] = 1                                      # Solo
+    segment[(~is_solo) & (group_max == 1) & (group_min == 0)] = 2  # AnyCryo
+    segment[(group_min == 1)] = 3                             # AllCryo
+
+    df_copy["GroupCryoSegment"] = segment
+    df_copy = df_copy.drop(columns=["_cryo_int"])
+
+    return df_copy
+
+
+# ---------------------------------------------------------------------------
 # fs-013
 # ---------------------------------------------------------------------------
 
