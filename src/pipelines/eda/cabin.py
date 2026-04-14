@@ -52,9 +52,23 @@ def run_cabin_analysis(df: pd.DataFrame) -> Dict[str, Any]:
         .unstack(fill_value=0)
     )
 
+    # CabinNumber vs target: cuartiles
+    cabin_with_num = cabin_df[cabin_df["CabinNumber"].notna()].copy()
+    cabin_with_num["CabinNumQ"] = pd.qcut(
+        cabin_with_num["CabinNumber"], q=4, labels=["Q1", "Q2", "Q3", "Q4"]
+    )
+    cabin_num_rates = (
+        cabin_with_num.groupby("CabinNumQ", observed=True)[TARGET]
+        .agg(transported_rate="mean", n="count")
+        .round({"transported_rate": 4})
+        .reset_index()
+        .rename(columns={"CabinNumQ": "CabinNumQ"})
+    )
+
     return {
         "deck": deck_stats,
         "side": side_stats,
         "cabin_null_pct": cabin_null_pct,
         "deck_homeplanet": hp_deck,
+        "cabin_num_quartiles": cabin_num_rates,
     }

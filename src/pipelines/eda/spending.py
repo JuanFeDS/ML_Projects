@@ -80,13 +80,52 @@ def compute_zero_inflation(df: pd.DataFrame) -> dict:
     }
 
 
+def compute_spending_outliers(df: pd.DataFrame) -> pd.DataFrame:
+    """Cuantifica pasajeros con gasto extremo (> p99) por servicio.
+
+    Estos ~86 pasajeros por servicio son relevantes para decidir si aplicar
+    capping o transformación logarítmica en feature engineering.
+
+    Returns:
+        DataFrame: Servicio × [p99, n_extremos, pct_extremos, max_valor].
+    """
+    rows = []
+    for col in SPENDING_COLS:
+        values = df[col].dropna()
+        p99 = values.quantile(0.99)
+        n_extreme = int((values > p99).sum())
+        rows.append({
+            "Servicio": col,
+            "p99": round(p99, 1),
+            "n_extremos": n_extreme,
+            "% extremos": round(n_extreme / len(values) * 100, 3),
+            "max_valor": round(values.max(), 1),
+        })
+    return pd.DataFrame(rows)
+
+
+def compute_spending_correlations(df: pd.DataFrame) -> pd.DataFrame:
+    """Matriz de correlación de Pearson entre los 5 servicios de gasto (log1p).
+
+    Útil para detectar servicios redundantes o altamente correlados antes
+    de construir el feature set.
+
+    Returns:
+        DataFrame: matriz de correlación 5×5 (log1p de cada servicio).
+    """
+    log_spend = np.log1p(df[SPENDING_COLS].fillna(0))
+    return log_spend.corr().round(4)
+
+
 def run_spending_analysis(df: pd.DataFrame) -> Dict[str, Any]:
     """Análisis completo del gasto por servicio.
 
     Returns:
-        dict con per_service (DataFrame) y zero_inflation (dict).
+        dict con per_service, zero_inflation, outliers y correlations.
     """
     return {
         "per_service": compute_per_service_stats(df),
         "zero_inflation": compute_zero_inflation(df),
+        "outliers": compute_spending_outliers(df),
+        "correlations": compute_spending_correlations(df),
     }
