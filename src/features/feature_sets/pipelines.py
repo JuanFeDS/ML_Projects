@@ -30,6 +30,7 @@ from src.features.engineering.derived import (
     create_solo_interaction_features,
     create_spend_cluster_features,
     create_structural_context_features,
+    extract_last_name,
 )
 
 
@@ -126,6 +127,17 @@ def _pipeline_fs014(df: pd.DataFrame, *, impute_age: bool = False) -> pd.DataFra
     df_out = create_spend_cluster_features(df_out)     # clusters + GroupCryoSegment + AgeVsPlanetMedian + IsExtremeSpender
     df_out = handle_missing_values_spaceship(df_out, impute_age=impute_age)
     return _add_group_size(df_out)
+
+
+def _pipeline_fs017(df: pd.DataFrame, *, impute_age: bool = False) -> pd.DataFrame:
+    """fs-017: fs-004 + LastName extraído de Name (para TE suavizado).
+
+    Extract last name antes de que Name sea eliminado por features_to_drop.
+    El TE suavizado (k=30) se aplica en feature_pipeline.py sobre LastName,
+    Deck y HomePlanet, previniendo leakage en apellidos raros (n=1-2).
+    """
+    df_out = _pipeline_fs004(df, impute_age=impute_age)
+    return extract_last_name(df_out)
 
 
 # ---------------------------------------------------------------------------

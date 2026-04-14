@@ -1,11 +1,12 @@
 {
-  "exp_id": "017",
+  "exp_id": "026",
   "model_name": "CatBoost",
-  "feature_set_name": "fs-012_child_route_te",
-  "feature_set_description": "fs-011 con Route como Target Encoding en lugar de OHE. Motivacion: PSO J318.5-22 tiene 31% error y su tasa de transporte difiere mucho segun HomePlanet de origen. Route_TE codifica la tasa media de transporte por ruta (una columna numerica vs 9 OHE), capturando la se\u00f1al ordinal que OHE no puede expresar. Features: IsChild, GroupHasChild, GroupChildRate (contexto familiar) + Deck_TE, HomePlanet_TE, Route_TE (3 target encodings).",
-  "feature_set_parent": "fs-011_child_route",
+  "feature_set_name": "fs-017_lastname_te",
+  "feature_set_description": "fs-004 + LastName con Target Encoding suavizado (k=30). LastName es proxy de familia: comparten HomePlanet, destino y comportamiento. TE suavizado bayesiano: TE=(n*mean+30*global_mean)/(n+30) previene leakage en apellidos raros (n=1-2 \u2192 TE\u2248global_mean\u22480.50).",
+  "feature_set_parent": "fs-004_target_encoding",
   "features_added": [
-    "Route_TE"
+    "LastName",
+    "LastName_TE"
   ],
   "features_removed": [],
   "numeric_features": [
@@ -21,25 +22,22 @@
     "SpendingCategories",
     "Deck_TE",
     "HomePlanet_TE",
-    "IsChild",
-    "GroupHasChild",
-    "GroupChildRate",
-    "Route_TE"
+    "LastName_TE"
   ],
-  "val_accuracy": 0.825,
-  "val_accuracy_default_threshold": 0.8109,
-  "val_roc_auc": 0.9061,
-  "cv_accuracy": 0.814,
-  "n_features": 28,
-  "n_train_samples": 6811,
+  "val_accuracy": 0.8575,
+  "val_accuracy_default_threshold": 0.8564,
+  "val_roc_auc": 0.9379,
+  "cv_accuracy": 0.8547,
+  "n_features": 25,
+  "n_train_samples": 8514,
   "best_params": {
-    "iterations": 400,
-    "depth": 7,
-    "learning_rate": 0.05567776420011066,
-    "l2_leaf_reg": 12.048063218106869,
-    "bagging_temperature": 0.7532380708632854
+    "iterations": 600,
+    "depth": 6,
+    "learning_rate": 0.06984284982015783,
+    "l2_leaf_reg": 17.09292634438464,
+    "bagging_temperature": 0.007697741191395324
   },
-  "best_threshold": 0.4106,
+  "best_threshold": 0.5291,
   "feature_names": [
     "Age",
     "RoomService",
@@ -52,14 +50,11 @@
     "HasSpending",
     "SpendingCategories",
     "TotalSpending_Log",
-    "IsChild",
-    "GroupHasChild",
-    "GroupChildRate",
     "CryoSleep_Encoded",
     "Side_Encoded",
     "Deck_TE",
     "HomePlanet_TE",
-    "Route_TE",
+    "LastName_TE",
     "Destination_55 Cancri e",
     "Destination_PSO J318.5-22",
     "Destination_TRAPPIST-1e",

@@ -19,6 +19,9 @@ class FeatureSetConfig:
         categorical_cols: Columnas a codificar con One-Hot Encoding.
         features_to_drop: Columnas a eliminar antes del entrenamiento.
         target_encode_cols: Columnas a codificar con Target Encoding.
+        te_smoothing_factor: Factor de suavizado bayesiano para TE (k en la fórmula
+            TE_smooth = (n*mean + k*global_mean) / (n+k)). 0.0 = TE simple sin suavizado.
+            Usar k>=10 para columnas de alta cardinalidad (ej. LastName).
         parent: Nombre del feature set del que hereda (None si es el primero).
         deprecated: Si True, el feature set está retirado y no debe usarse en nuevos experimentos.
     """
@@ -30,5 +33,6 @@ class FeatureSetConfig:
     categorical_cols: List[str]
     features_to_drop: List[str]
     target_encode_cols: List[str] = field(default_factory=list)
+    te_smoothing_factor: float = 0.0
     parent: Optional[str] = None
     deprecated: bool = False

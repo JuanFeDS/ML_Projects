@@ -430,3 +430,33 @@ def create_group_context_features(df: pd.DataFrame) -> pd.DataFrame:
 
     df_copy = df_copy.drop(columns=["_raw_spend"])
     return df_copy
+
+
+# ---------------------------------------------------------------------------
+# fs-017 — LastName extraction (proxy de familia + HomePlanet)
+# ---------------------------------------------------------------------------
+
+def extract_last_name(df: pd.DataFrame) -> pd.DataFrame:
+    """Extrae el apellido de la columna Name.
+
+    El apellido es un proxy potente porque familias viajan juntas y comparten
+    HomePlanet, destino y comportamiento. Se espera TE suavizado (k=30) en lugar
+    de TE simple para evitar leakage en apellidos raros (n=1-2).
+
+    Señal esperada: +0.01 en accuracy con TE suavizado sin leakage.
+
+    Args:
+        df: DataFrame con columna Name (formato "FirstName LastName").
+
+    Returns:
+        DataFrame con columna LastName añadida. NaN en Name → "Unknown".
+    """
+    df_copy = df.copy()
+    df_copy["LastName"] = (
+        df_copy["Name"]
+        .fillna("Unknown Unknown")
+        .str.split()
+        .str[-1]
+        .fillna("Unknown")
+    )
+    return df_copy
