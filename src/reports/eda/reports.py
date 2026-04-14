@@ -191,6 +191,40 @@ def _section_bivariate(md: MarkdownReport, html: HTMLReport, bivariate: dict) ->
     html.add_figure(age_cryo_bar(bivariate["age_cryo"]), title="Age y Gasto por estado CryoSleep")
 
 
+def _section_group(md: MarkdownReport, html: HTMLReport, group: dict) -> None:
+    md.add_section("Análisis de Grupos de Viaje")
+    html.add_section("Análisis de Grupos de Viaje")
+    md.add_text(
+        "El `PassengerId` codifica el grupo (`GGGG_MM`). 4805 de 6217 grupos viajan solos. "
+        "Los pasajeros agrupados tienen una tasa de transporte 11pp mayor que los solos. "
+        "**HomePlanet es siempre homogéneo dentro del grupo** (0 grupos mixtos), lo que permite "
+        "imputar HomePlanet por otros miembros sin ambigüedad."
+    )
+    homog = group["homeplanet_homogeneity"]
+    md.add_metric("Grupos mixtos (HomePlanet)", str(homog["n_grupos_mixtos_homeplanet"]))
+    md.add_metric("% grupos homogéneos", f"{homog['pct_homogeneous']:.1f}%")
+
+    md.add_subsection("Solo vs Agrupado")
+    md.add_table(group["solo_vs_grouped"], index=False)
+    gs_chi2 = group["groupsize_chi2"]
+    html.add_figure(
+        groupsize_bar(gs_chi2["summary"], gs_chi2["chi2"], gs_chi2["p"]),
+        title="Transported rate por GroupSize",
+    )
+
+    md.add_subsection("Estado CryoSleep del grupo")
+    md.add_text(
+        "AllCryo (todos en CryoSleep): 92.2% transported. "
+        "NoCryo (nadie en CryoSleep): 33.9%. "
+        "La señal grupal supera a la individual (CryoSleep=True individual: 81.8%)."
+    )
+    md.add_table(group["cryo_dynamics"], index=False)
+
+    fam = group["family_stats"]
+    md.add_subsection("Indicador de familia (apellido)")
+    md.add_metric("Grupos con mismo apellido", f"{fam['grupos_mismo_apellido']} / {fam['n_grupos_multi']} ({fam['pct_familia']:.1f}%)")
+
+
 def _section_decisions(md: MarkdownReport, derived: dict, spending: dict) -> None:
     sp = derived["spending"]
     gs = derived["groupsize"]
@@ -264,6 +298,9 @@ def build_eda_report(df: pd.DataFrame, results: Dict[str, Any]) -> None:
 
     if "bivariate" in results:
         _section_bivariate(md, html, results["bivariate"])
+
+    if "group" in results:
+        _section_group(md, html, results["group"])
 
     _section_decisions(md, derived, results.get("spending", {"per_service": None}))
 
