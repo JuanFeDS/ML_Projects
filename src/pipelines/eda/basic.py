@@ -114,8 +114,59 @@ def run_statistical_analysis(df: pd.DataFrame) -> Dict[str, Any]:
     }
 
 
+def compute_feature_correlation_matrix(df: pd.DataFrame) -> pd.DataFrame:
+    """Correlación de Pearson entre todas las features numéricas del raw dataset.
+
+    Incluye Age y los 5 servicios de gasto (log1p). Útil para detectar
+    redundancias antes de construir el feature set.
+
+    Returns:
+        DataFrame: matriz de correlación simétrica con las features numéricas.
+    """
+    temp = df[RAW_NUMERIC].copy()
+    for col in SPENDING_COLS:
+        temp[f"log_{col}"] = np.log1p(temp[col].fillna(0))
+    numeric_cols = ["Age"] + [f"log_{c}" for c in SPENDING_COLS]
+    return temp[numeric_cols].corr().round(4)
+
+
+def compute_vip_profile(df: pd.DataFrame) -> Dict[str, Any]:
+    """Perfil detallado de pasajeros VIP.
+
+    VIP tiene chi2=11.5 (p<0.001) con tasa transported=38.2% vs 50.6% no-VIP.
+    Este análisis caracteriza quiénes son los VIP para guiar decisiones
+    de feature engineering o imputación.
+
+    Returns:
+        dict con counts, transported_rate, homeplanet_dist, destination_dist,
+        cryo_dist, age_stats y spending_median.
+    """
+    vip_mask = df["VIP"].isin([True, "True"])
+    vip = df[vip_mask]
+    non_vip = df[~vip_mask & df["VIP"].notna()]
+
+    return {
+        "counts": {"VIP": int(vip_mask.sum()), "no_VIP": int((~vip_mask & df["VIP"].notna()).sum())},
+        "transported_rate": {
+            "VIP": round(vip[TARGET].mean(), 4),
+            "no_VIP": round(non_vip[TARGET].mean(), 4),
+        },
+        "homeplanet_dist": vip["HomePlanet"].value_counts(normalize=True).round(4).to_dict(),
+        "destination_dist": vip["Destination"].value_counts(normalize=True).round(4).to_dict(),
+        "cryo_dist": vip["CryoSleep"].value_counts(normalize=True).round(4).to_dict(),
+        "age_median": {
+            "VIP": round(vip["Age"].median(), 1),
+            "no_VIP": round(non_vip["Age"].median(), 1),
+        },
+        "total_spending_median": {
+            "VIP": round(vip[SPENDING_COLS].fillna(0).sum(axis=1).median(), 1),
+            "no_VIP": round(non_vip[SPENDING_COLS].fillna(0).sum(axis=1).median(), 1),
+        },
+    }
+
+
 def run_derived_analysis(df: pd.DataFrame) -> Dict[str, Any]:
-    """TotalSpending, GroupSize y SpendingCategories vs target."""
+    """TotalSpending, GroupSize, SpendingCategories, correlaciones y perfil VIP."""
     from src.pipelines.eda.statistical import compute_chi2_stats
 
     temp = df.copy()
@@ -126,4 +177,6 @@ def run_derived_analysis(df: pd.DataFrame) -> Dict[str, Any]:
         "spending": compute_derived_spending_stats(temp),
         "groupsize": compute_chi2_stats(temp, "GroupSize", TARGET),
         "spending_categories": compute_chi2_stats(temp, "SpendingCategories", TARGET),
+        "feature_correlations": compute_feature_correlation_matrix(df),
+        "vip_profile": compute_vip_profile(df),
     }
