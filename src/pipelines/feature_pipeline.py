@@ -35,11 +35,21 @@ def run_feature_pipeline(df_raw: pd.DataFrame, fs: Any, fs_name: str) -> Dict[st
     # 3. Target Encoding
     target_encoder = {}
     if fs.target_encode_cols:
+        k = getattr(fs, "te_smoothing_factor", 0.0)
+        global_mean = float(df[TARGET].mean())
         for col in fs.target_encode_cols:
-            mapping = df.groupby(col)[TARGET].mean().to_dict()
+            if k > 0:
+                # TE suavizado bayesiano: TE_smooth = (n*mean + k*global_mean) / (n+k)
+                # Previene leakage en categorías de alta cardinalidad (ej. LastName)
+                stats = df.groupby(col)[TARGET].agg(["sum", "count"])
+                mapping = (
+                    (stats["sum"] + k * global_mean) / (stats["count"] + k)
+                ).to_dict()
+            else:
+                mapping = df.groupby(col)[TARGET].mean().to_dict()
             target_encoder[col] = mapping
-            df[f"{col}_TE"] = df[col].map(mapping)
-        
+            df[f"{col}_TE"] = df[col].map(mapping).fillna(global_mean)
+
         MODELS_DIR.mkdir(parents=True, exist_ok=True)
         joblib.dump(target_encoder, get_target_encoder_path(fs_name))
         

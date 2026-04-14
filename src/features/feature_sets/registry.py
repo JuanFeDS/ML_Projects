@@ -28,6 +28,7 @@ from src.features.feature_sets.pipelines import (
     _pipeline_fs013,
     _pipeline_fs014,
     _pipeline_fs015,
+    _pipeline_fs017,
 )
 
 # ---------------------------------------------------------------------------
@@ -55,6 +56,9 @@ _FS004_DROP: List[str] = _FS001_DROP
 
 _FS012_TARGET_ENCODE: List[str] = _FS004_TARGET_ENCODE + ["Route"]
 _FS012_NUMERIC: List[str] = _FS004_NUMERIC + ["IsChild", "GroupHasChild", "GroupChildRate", "Route_TE"]
+
+_FS017_TARGET_ENCODE: List[str] = _FS004_TARGET_ENCODE + ["LastName"]
+_FS017_NUMERIC: List[str] = _FS004_NUMERIC + ["LastName_TE"]
 
 # ---------------------------------------------------------------------------
 # Registro principal
@@ -249,6 +253,23 @@ FEATURE_SETS: dict = {
         categorical_cols=_FS004_CATEGORICAL,
         features_to_drop=_FS004_DROP,
         target_encode_cols=_FS004_TARGET_ENCODE,
+    ),
+
+    "fs-017_lastname_te": FeatureSetConfig(
+        description=(
+            "fs-004 + LastName con Target Encoding suavizado (k=30). "
+            "LastName es proxy de familia: comparten HomePlanet, destino y comportamiento. "
+            "TE suavizado bayesiano: TE=(n*mean+30*global_mean)/(n+30) previene leakage "
+            "en apellidos raros (n=1-2 → TE≈global_mean≈0.50)."
+        ),
+        parent="fs-004_target_encoding",
+        pipeline=lambda df: _pipeline_fs017(df),
+        test_pipeline=lambda df: _pipeline_fs017(df, impute_age=True),
+        numeric_features=_FS017_NUMERIC,
+        categorical_cols=_FS004_CATEGORICAL,
+        features_to_drop=_FS001_DROP,
+        target_encode_cols=_FS017_TARGET_ENCODE,
+        te_smoothing_factor=30.0,
     ),
 
     # --- Deprecados (referencia histórica, no usar en nuevos experimentos) ---
