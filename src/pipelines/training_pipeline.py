@@ -15,7 +15,7 @@ from typing import Any, Dict, Optional
 import joblib
 import mlflow
 import pandas as pd
-from sklearn.model_selection import StratifiedKFold, train_test_split
+from sklearn.model_selection import StratifiedKFold
 
 from src.config.settings import (
     DOCS_DIR,
@@ -36,8 +36,8 @@ from src.models.training import (
     analyze_errors,
     build_moe,
     build_stacking,
+    compute_oof_metrics,
     evaluate_models,
-    evaluate_on_validation,
     optimize_threshold,
     tune_model,
 )
@@ -120,12 +120,8 @@ def run_training_pipeline(  # pylint: disable=too-many-locals,too-many-branches,
     y = df[TARGET]
     x_df = df.drop(columns=[TARGET])
 
-    x_train, x_val, y_train, y_val = train_test_split(
-        x_df, y, test_size=0.2, stratify=y, random_state=42
-    )
-    print(f"  Train: {x_train.shape[0]} | Val: {x_val.shape[0]}")
-
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    print(f"  Validacion: StratifiedKFold(n_splits=5) sobre dataset completo ({x_df.shape[0]} filas)")
 
     with mlrun(f"03_Train_{fs_name}"):
         # ------------------------------------------------------------------
@@ -136,7 +132,7 @@ def run_training_pipeline(  # pylint: disable=too-many-locals,too-many-branches,
         models_to_eval = {model_name: MODELS[model_name]} if model_name else MODELS
 
         print(f"\n[CV] Evaluando modelos: {list(models_to_eval.keys())}")
-        cv_results = evaluate_models(models_to_eval, x_train, y_train, cv)
+        cv_results = evaluate_models(models_to_eval, x_df, y, cv)
         print(cv_results.to_string())
 
         best_name = model_name if model_name else next(
@@ -153,7 +149,7 @@ def run_training_pipeline(  # pylint: disable=too-many-locals,too-many-branches,
         if tune and best_name in PARAM_SPACES:
             print(f"\n[TUNE] Tuneando {best_name} (n_iter={n_iter})...")
             tuned_model, best_params, tuned_cv_score = tune_model(
-                MODELS[best_name], PARAM_SPACES[best_name], x_train, y_train, cv, n_iter=n_iter
+                MODELS[best_name], PARAM_SPACES[best_name], x_df, y, cv, n_iter=n_iter
             )
             print(f"  Mejor CV tuneado: {tuned_cv_score:.4f} | Params: {best_params}")
         else:
@@ -165,6 +161,7 @@ def run_training_pipeline(  # pylint: disable=too-many-locals,too-many-branches,
         # ------------------------------------------------------------------
         stacking_model = None
         stacking_val: dict = {}
+        stacking_cv_score: float = 0.0
         top_names = [best_name]
         if build_stack and not model_name:
             print("\n[STACK] Construyendo Stacking...")
@@ -172,77 +169,93 @@ def run_training_pipeline(  # pylint: disable=too-many-locals,too-many-branches,
             print(f"  Base estimators: {top_names}")
             base_estimators = [(name, MODELS[name]) for name in top_names]
             stacking_model, stacking_cv_score = build_stacking(
-                base_estimators, x_train, y_train, cv
+                base_estimators, x_df, y, cv
             )
-            stacking_val = evaluate_on_validation(
-                stacking_model, x_train, y_train, x_val, y_val
-            )
-            print(f"  Stacking -> val_acc={stacking_val['val_accuracy']:.4f} | roc_auc={stacking_val['val_roc_auc']:.4f}")
+            stacking_val = {
+                "val_accuracy": stacking_cv_score,
+                "val_roc_auc": 0.0,
+                "classification_report": "(CV only — OOF no disponible para Stacking)",
+                "y_pred": [],
+                "y_proba": [],
+            }
+            print(f"  Stacking -> cv_acc={stacking_cv_score:.4f}")
 
         # ------------------------------------------------------------------
         # Mixture of Experts
         # ------------------------------------------------------------------
         moe_model = None
         moe_val: dict = {}
+        moe_cv_score: float = 0.0
         if build_moe_flag:
             print("\n[MOE] Construyendo Mixture of Experts...")
-            moe_model, moe_cv_score = build_moe(tuned_model, x_train, y_train, cv)
-            sizes = moe_model.get_segment_sizes(x_train)
-            moe_val = evaluate_on_validation(moe_model, x_train, y_train, x_val, y_val)
+            moe_model, moe_cv_score = build_moe(tuned_model, x_df, y, cv)
+            sizes = moe_model.get_segment_sizes(x_df)
+            moe_val = {
+                "val_accuracy": moe_cv_score,
+                "val_roc_auc": 0.0,
+                "classification_report": "(CV only — OOF del MoE)",
+                "y_pred": [],
+                "y_proba": [],
+            }
             print(f"  Segmento cryo: {sizes['cryo']:,} | activo: {sizes['active']:,}")
-            print(f"  MoE -> val_acc={moe_val['val_accuracy']:.4f} | roc_auc={moe_val['val_roc_auc']:.4f}")
+            print(f"  MoE -> cv_acc={moe_cv_score:.4f}")
 
         # ------------------------------------------------------------------
-        # Evaluacion en validacion del modelo principal (siempre)
+        # Evaluacion OOF del modelo tuneado (dataset completo)
         # ------------------------------------------------------------------
-        print("\n[EVAL] Evaluando en validacion...")
-        tuned_val = evaluate_on_validation(tuned_model, x_train, y_train, x_val, y_val)
-        print(f"  {best_name} -> val_acc={tuned_val['val_accuracy']:.4f} | roc_auc={tuned_val['val_roc_auc']:.4f}")
+        print("\n[OOF] Calculando predicciones out-of-fold para el modelo tuneado...")
+        tuned_val = compute_oof_metrics(tuned_model, x_df, y, cv)
+        print(f"  {best_name} -> OOF acc={tuned_val['val_accuracy']:.4f} | roc_auc={tuned_val['val_roc_auc']:.4f}")
 
         # ------------------------------------------------------------------
-        # Seleccion del ganador
+        # Seleccion del ganador (por cv_score / OOF accuracy)
         # ------------------------------------------------------------------
-        candidates = [(best_name, tuned_model, tuned_val)]
+        candidates_scores = [(best_name, tuned_model, tuned_val["val_accuracy"])]
         if stacking_val:
-            candidates.append(("Stacking", stacking_model, stacking_val))
+            candidates_scores.append(("Stacking", stacking_model, stacking_cv_score))
         if moe_val:
-            candidates.append(("MoE", moe_model, moe_val))
+            candidates_scores.append(("MoE", moe_model, moe_cv_score))
 
-        winner_name, winner_model, winner_val = max(
-            candidates, key=lambda t: t[2]["val_accuracy"]
-        )
-        print(f"\n[WIN] Modelo ganador: {winner_name} | val_acc={winner_val['val_accuracy']:.4f}")
+        winner_name, winner_model, _ = max(candidates_scores, key=lambda t: t[2])
+
+        if winner_name == best_name:
+            winner_val = tuned_val
+        else:
+            print(f"\n[OOF] Calculando OOF para el ganador ({winner_name})...")
+            winner_val = compute_oof_metrics(winner_model, x_df, y, cv)
+
+        print(f"\n[WIN] Modelo ganador: {winner_name} | OOF acc={winner_val['val_accuracy']:.4f}")
 
         # ------------------------------------------------------------------
         # Analisis de errores y umbral optimo
         # ------------------------------------------------------------------
-        print("\n[ERR] Analizando errores del modelo ganador...")
+        print("\n[ERR] Analizando errores del modelo ganador (predicciones OOF)...")
         y_pred_winner = winner_val["y_pred"]
         y_proba_winner = winner_val["y_proba"]
         error_tables = analyze_errors(
-            x_val, y_val, pd.Series(y_pred_winner, index=y_val.index)
+            x_df, y, pd.Series(y_pred_winner, index=y.index)
         )
         for seg, tbl in error_tables.items():
             print(f"\n  Error rate por {seg}:")
             print(tbl.to_string(index=False))
 
-        print("\n[THR] Optimizando umbral de clasificacion...")
-        best_threshold, threshold_acc = optimize_threshold(y_val, y_proba_winner)
+        print("\n[THR] Optimizando umbral de clasificacion (sobre OOF)...")
+        best_threshold, threshold_acc = optimize_threshold(y, y_proba_winner)
         gain = round(threshold_acc - winner_val["val_accuracy"], 4)
         print(f"  Umbral optimo: {best_threshold:.4f} -> val_accuracy: {threshold_acc:.4f} (ganancia: {gain:+.4f})")
 
         # ------------------------------------------------------------------
-        # Re-entrenamiento sobre train completo
+        # Re-entrenamiento sobre el dataset completo
         # ------------------------------------------------------------------
-        print("\n[FIT] Re-entrenando sobre x_train completo...")
-        winner_model.fit(x_train, y_train)
+        print("\n[FIT] Re-entrenando sobre dataset completo...")
+        winner_model.fit(x_df, y)
 
         # ------------------------------------------------------------------
         # Metadata del experimento
         # ------------------------------------------------------------------
         log_path = str(DOCS_DIR / "model" / "experimentation_log.md")
         exp_id = get_next_exp_id(log_path)
-        feature_names = x_train.columns.tolist()
+        feature_names = x_df.columns.tolist()
 
         features_added: list = []
         features_removed: list = []
@@ -277,8 +290,8 @@ def run_training_pipeline(  # pylint: disable=too-many-locals,too-many-branches,
             "val_accuracy_default_threshold": winner_val["val_accuracy"],
             "val_roc_auc": winner_val["val_roc_auc"],
             "cv_accuracy": best_cv_score,
-            "n_features": x_train.shape[1],
-            "n_train_samples": x_train.shape[0],
+            "n_features": x_df.shape[1],
+            "n_train_samples": x_df.shape[0],
             "best_params": best_params,
             "best_threshold": effective_threshold,
             "feature_names": feature_names,
@@ -363,9 +376,9 @@ def run_training_pipeline(  # pylint: disable=too-many-locals,too-many-branches,
             print("\n[SHAP] Generando analisis SHAP...")
             shap_plots = compute_shap_plots(
                 model=winner_model,
-                x_train=x_train,
-                x_val=x_val,
-                y_val=y_val,
+                x_train=x_df,
+                x_val=x_df,
+                y_val=y,
                 y_proba=winner_val["y_proba"],
                 feature_names=feature_names,
             )
