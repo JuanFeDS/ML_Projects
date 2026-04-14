@@ -20,6 +20,7 @@ from src.pipelines.eda import (
     run_spending_analysis,
     run_domain_rules_validation,
     run_bivariate_analysis,
+    run_group_analysis,
 )
 from src.reports.eda.reports import build_eda_report
 
@@ -63,6 +64,9 @@ def main():
         bivariate_res = run_bivariate_analysis(df)
         print("  - [X] Analisis bivariado (CryoSleep x HomePlanet, Deck, Age)")
 
+        group_res = run_group_analysis(df)
+        print("  - [X] Analisis de grupos (solo vs agrupado, CryoSleep grupal, familia)")
+
         # 3. Consolidar resultados
         results = {
             "basic": basic_res,
@@ -73,6 +77,7 @@ def main():
             "spending": spending_res,
             "domain_rules": domain_res,
             "bivariate": bivariate_res,
+            "group": group_res,
         }
 
         # 4. Generacion de Reportes Automaticos

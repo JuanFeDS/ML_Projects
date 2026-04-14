@@ -13,6 +13,7 @@ from src.pipelines.eda.basic import (
 from src.pipelines.eda.bivariate import run_bivariate_analysis
 from src.pipelines.eda.cabin import run_cabin_analysis
 from src.pipelines.eda.domain_rules import run_domain_rules_validation
+from src.pipelines.eda.group import run_group_analysis
 from src.pipelines.eda.spending import run_spending_analysis
 
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     "run_spending_analysis",
     "run_domain_rules_validation",
     "run_bivariate_analysis",
+    "run_group_analysis",
 ]
