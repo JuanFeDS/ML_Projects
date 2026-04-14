@@ -6,9 +6,10 @@ del dataset para un feature set seleccionado, delegando la lógica a src/.
 """
 import argparse
 
+import pandas as pd
 import mlflow
 
-from src.config.settings import get_train_features, get_train_scaled
+from src.config.settings import get_train_features, get_train_scaled, TRAIN_RAW
 from src.features.constants import TARGET
 from src.features.feature_sets import DEFAULT_FEATURE_SET, FEATURE_SETS
 from src.models.tracking import mlrun
@@ -20,7 +21,10 @@ def main():
     """Ejecuta el flujo secuencial de feature engineering."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--feature-set", default=DEFAULT_FEATURE_SET, choices=list(FEATURE_SETS.keys()))
-    fs_name = parser.parse_args().feature_set
+    parser.add_argument("--train-path", default=None,
+                        help="Ruta alternativa al CSV de entrenamiento (e.g. data/processed/train_transductive.csv)")
+    args = parser.parse_args()
+    fs_name = args.feature_set
     fs = FEATURE_SETS[fs_name]
 
     print("=" * 60)
@@ -28,8 +32,12 @@ def main():
     print("=" * 60)
 
     # 2. Carga de datos
-    df_raw = load_raw_train()
-    print(f"[OK] Datos crudos cargados: {df_raw.shape[0]:,} registros")
+    if args.train_path:
+        df_raw = pd.read_csv(args.train_path)
+        print(f"[OK] Datos cargados desde {args.train_path}: {df_raw.shape[0]:,} registros")
+    else:
+        df_raw = load_raw_train()
+        print(f"[OK] Datos crudos cargados: {df_raw.shape[0]:,} registros")
 
     # Iniciar seguimiento de MLflow (sera child run si hay un parent activo)
     with mlrun(f"02_Features_{fs_name}", tags={"stage": "features", "fs": fs_name}) as run:
