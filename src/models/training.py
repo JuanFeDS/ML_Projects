@@ -13,6 +13,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
 from sklearn.model_selection import (
     StratifiedKFold,
+    cross_val_predict,
     cross_val_score,
 )
 from tqdm import tqdm
@@ -172,6 +173,40 @@ def evaluate_on_validation(
         "classification_report": classification_report(y_val, y_pred),
         "y_pred": y_pred,
         "y_proba": y_proba,
+    }
+
+
+def compute_oof_metrics(
+    model: Any,
+    x: pd.DataFrame,
+    y: pd.Series,
+    cv: StratifiedKFold,
+) -> Dict:
+    """Genera predicciones out-of-fold y calcula metricas sobre el dataset completo.
+
+    A diferencia de evaluate_on_validation, no depende de un split fijo.
+    Las predicciones OOF dan una estimacion honesta del rendimiento real del modelo.
+
+    Args:
+        model: Estimador sklearn.
+        x: Features completas (sin split previo).
+        y: Target completo.
+        cv: Estrategia de cross-validation.
+
+    Returns:
+        Diccionario con val_accuracy, val_roc_auc, classification_report,
+        y_pred y y_proba (todos OOF).
+    """
+    oof_proba = cross_val_predict(
+        model, x, y, cv=cv, method="predict_proba", n_jobs=-1
+    )[:, 1]
+    oof_pred = (oof_proba >= 0.5).astype(int)
+    return {
+        "val_accuracy": round(float(accuracy_score(y, oof_pred)), 4),
+        "val_roc_auc": round(float(roc_auc_score(y, oof_proba)), 4),
+        "classification_report": classification_report(y, oof_pred),
+        "y_pred": oof_pred,
+        "y_proba": oof_proba,
     }
 
 
