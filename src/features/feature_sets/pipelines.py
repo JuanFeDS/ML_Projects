@@ -25,6 +25,7 @@ from src.features.engineering.derived import (
     _add_cabin_percentile,
     create_child_route_features,
     create_cryo_spending_interaction_features,
+    create_group_consistency_features,
     create_group_context_features,
     create_group_spending_features,
     create_solo_interaction_features,
@@ -130,14 +131,34 @@ def _pipeline_fs014(df: pd.DataFrame, *, impute_age: bool = False) -> pd.DataFra
 
 
 def _pipeline_fs017(df: pd.DataFrame, *, impute_age: bool = False) -> pd.DataFrame:
-    """fs-017: fs-004 + LastName extraído de Name (para TE suavizado).
+    """fs-017: fs-004 + LastName extraído de Name (para fold-aware TE).
 
     Extract last name antes de que Name sea eliminado por features_to_drop.
-    El TE suavizado (k=30) se aplica en feature_pipeline.py sobre LastName,
-    Deck y HomePlanet, previniendo leakage en apellidos raros (n=1-2).
+    El TE fold-aware se aplica dentro del Pipeline de entrenamiento via
+    sklearn TargetEncoder(cv=5), eliminando leakage en apellidos raros.
     """
     df_out = _pipeline_fs004(df, impute_age=impute_age)
     return extract_last_name(df_out)
+
+
+def _pipeline_fs018(df: pd.DataFrame, *, impute_age: bool = False) -> pd.DataFrame:
+    """fs-018: fs-017 + 3 features de consistencia interna de grupo.
+
+    GroupAllSameDest, GroupAllSameHomePlanet y GroupConsistencyScore miden
+    cohesión observable del grupo sin usar el target (sin leakage).
+    """
+    df_out = _pipeline_fs017(df, impute_age=impute_age)
+    return create_group_consistency_features(df_out)
+
+
+def _pipeline_fs019(df: pd.DataFrame, *, impute_age: bool = False) -> pd.DataFrame:
+    """fs-019: idéntico a fs-017 pero entrenado sobre train + pseudo-etiquetas de test.
+
+    El pipeline es el mismo; la diferencia está en los datos de entrada
+    (train_pseudo.csv en lugar de train.csv), pasados via --train-path en
+    02_features.py.
+    """
+    return _pipeline_fs017(df, impute_age=impute_age)
 
 
 # ---------------------------------------------------------------------------

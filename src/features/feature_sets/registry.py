@@ -29,6 +29,8 @@ from src.features.feature_sets.pipelines import (
     _pipeline_fs014,
     _pipeline_fs015,
     _pipeline_fs017,
+    _pipeline_fs018,
+    _pipeline_fs019,
 )
 
 # ---------------------------------------------------------------------------
@@ -59,6 +61,10 @@ _FS012_NUMERIC: List[str] = _FS004_NUMERIC + ["IsChild", "GroupHasChild", "Group
 
 _FS017_TARGET_ENCODE: List[str] = _FS004_TARGET_ENCODE + ["LastName"]
 _FS017_NUMERIC: List[str] = _FS004_NUMERIC + ["LastName_TE"]
+
+_FS018_NUMERIC: List[str] = _FS004_NUMERIC + [
+    "GroupAllSameDest", "GroupAllSameHomePlanet", "GroupConsistencyScore",
+]
 
 # ---------------------------------------------------------------------------
 # Registro principal
@@ -257,19 +263,55 @@ FEATURE_SETS: dict = {
 
     "fs-017_lastname_te": FeatureSetConfig(
         description=(
-            "fs-004 + LastName con Target Encoding suavizado (k=30). "
+            "fs-004 + LastName con Target Encoding fold-aware (sklearn TargetEncoder, cv=5). "
             "LastName es proxy de familia: comparten HomePlanet, destino y comportamiento. "
-            "TE suavizado bayesiano: TE=(n*mean+30*global_mean)/(n+30) previene leakage "
-            "en apellidos raros (n=1-2 → TE≈global_mean≈0.50)."
+            "El encoding se computa por fold dentro del CV para eliminar leakage en apellidos "
+            "raros (~80-90% de test surnames son unseen en train). Pipeline interno aplica "
+            "TargetEncoder(smooth='auto') a LastName y passthrough al resto."
         ),
         parent="fs-004_target_encoding",
         pipeline=lambda df: _pipeline_fs017(df),
         test_pipeline=lambda df: _pipeline_fs017(df, impute_age=True),
-        numeric_features=_FS017_NUMERIC,
+        numeric_features=_FS004_NUMERIC,
         categorical_cols=_FS004_CATEGORICAL,
         features_to_drop=_FS001_DROP,
-        target_encode_cols=_FS017_TARGET_ENCODE,
-        te_smoothing_factor=30.0,
+        target_encode_cols=_FS004_TARGET_ENCODE,
+        fold_te_cols=["LastName"],
+    ),
+
+    "fs-019_pseudo_labeled": FeatureSetConfig(
+        description=(
+            "fs-017 con pseudo-labeling: entrenado sobre train.csv + 985 filas de "
+            "test.csv donde exp-027 predice con confianza >= 0.95 (711 True, 274 False, "
+            "confianza media 97.6%). Pipeline idéntico a fs-017; diferencia es el "
+            "tamaño del dataset de entrenamiento (8,693 → 9,678 filas, +11.3%)."
+        ),
+        parent="fs-017_lastname_te",
+        pipeline=lambda df: _pipeline_fs019(df),
+        test_pipeline=lambda df: _pipeline_fs019(df, impute_age=True),
+        numeric_features=_FS004_NUMERIC,
+        categorical_cols=_FS004_CATEGORICAL,
+        features_to_drop=_FS001_DROP,
+        target_encode_cols=_FS004_TARGET_ENCODE,
+        fold_te_cols=["LastName"],
+    ),
+
+    "fs-018_group_consistency": FeatureSetConfig(
+        description=(
+            "fs-017 + 3 features de coherencia interna de grupo (sin usar target). "
+            "GroupAllSameDest: 1 si todos en el grupo comparten Destination. "
+            "GroupAllSameHomePlanet: 1 si todos comparten HomePlanet. "
+            "GroupConsistencyScore: suma ordinal 0-2 de cohesión grupal. "
+            "Complementa LastName fold-aware TE con señal estructural del grupo."
+        ),
+        parent="fs-017_lastname_te",
+        pipeline=lambda df: _pipeline_fs018(df),
+        test_pipeline=lambda df: _pipeline_fs018(df, impute_age=True),
+        numeric_features=_FS018_NUMERIC,
+        categorical_cols=_FS004_CATEGORICAL,
+        features_to_drop=_FS001_DROP,
+        target_encode_cols=_FS004_TARGET_ENCODE,
+        fold_te_cols=["LastName"],
     ),
 
     # --- Deprecados (referencia histórica, no usar en nuevos experimentos) ---
