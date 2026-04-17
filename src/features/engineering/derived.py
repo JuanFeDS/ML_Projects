@@ -460,3 +460,65 @@ def extract_last_name(df: pd.DataFrame) -> pd.DataFrame:
         .fillna("Unknown")
     )
     return df_copy
+
+
+# ---------------------------------------------------------------------------
+# fs-018 — Group consistency features (sin uso del target)
+# ---------------------------------------------------------------------------
+
+def create_group_consistency_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Crea features de coherencia interna de grupo (fs-018).
+
+    Mide qué tan homogéneo es el grupo en variables observables (sin usar el
+    target Transported). Grupos cohesivos tienden a tener comportamientos más
+    predecibles.
+
+    Señal estadística:
+    - Grupos donde TODOS van al mismo destino: más cohesivos → mejor señal.
+    - Grupos con HomePlanet homogéneo: correlaciona con Deck → refuerza TE.
+    - GroupSizeIsOne: viajeros solos tienen tasas de transporte distintas
+      a grupos (ya existe IsAlone en fs-003; aquí como binario directo).
+
+    Features:
+        GroupAllSameDest: 1 si todos los miembros del grupo tienen el mismo
+            Destination (excluyendo Unknown). 0 si hay heterogeneidad.
+        GroupAllSameHomePlanet: 1 si todos los miembros del grupo comparten
+            HomePlanet (excluyendo Unknown). Complementa Deck_TE y HomePlanet_TE.
+        GroupConsistencyScore: suma de GroupAllSameDest + GroupAllSameHomePlanet
+            (0-2, score ordinal de cohesión grupal).
+
+    Args:
+        df: DataFrame con TravelGroup, Destination, HomePlanet disponibles
+            (después de extract_cabin_features y extract_group_features).
+
+    Returns:
+        DataFrame con las 3 features añadidas.
+    """
+    df_copy = df.copy()
+
+    # Destino homogéneo en el grupo
+    dest_filled = df_copy["Destination"].fillna("Unknown")
+    dest_nunique = df_copy.groupby("TravelGroup")["Destination"].transform(
+        lambda x: x.fillna("Unknown").nunique()
+    )
+    # Solo contar como homogéneo si hay más de 1 miembro Y todos tienen el mismo destino
+    group_size = df_copy.groupby("TravelGroup")["TravelGroup"].transform("count")
+    df_copy["GroupAllSameDest"] = (
+        ((dest_nunique == 1) & (dest_filled != "Unknown") & (group_size > 1)).astype(int)
+    )
+
+    # HomePlanet homogéneo en el grupo
+    hp_nunique = df_copy.groupby("TravelGroup")["HomePlanet"].transform(
+        lambda x: x.fillna("Unknown").nunique()
+    )
+    hp_filled = df_copy["HomePlanet"].fillna("Unknown")
+    df_copy["GroupAllSameHomePlanet"] = (
+        ((hp_nunique == 1) & (hp_filled != "Unknown") & (group_size > 1)).astype(int)
+    )
+
+    # Score ordinal de cohesión
+    df_copy["GroupConsistencyScore"] = (
+        df_copy["GroupAllSameDest"] + df_copy["GroupAllSameHomePlanet"]
+    )
+
+    return df_copy

@@ -22,6 +22,10 @@ class FeatureSetConfig:
         te_smoothing_factor: Factor de suavizado bayesiano para TE (k en la fórmula
             TE_smooth = (n*mean + k*global_mean) / (n+k)). 0.0 = TE simple sin suavizado.
             Usar k>=10 para columnas de alta cardinalidad (ej. LastName).
+        fold_te_cols: Columnas a codificar con Target Encoding fold-aware (sklearn
+            TargetEncoder). El encoding se computa por fold dentro del CV para evitar
+            leakage en columnas de alta cardinalidad. Las columnas se mantienen como
+            strings en el CSV y son procesadas por el Pipeline interno de entrenamiento.
         parent: Nombre del feature set del que hereda (None si es el primero).
         deprecated: Si True, el feature set está retirado y no debe usarse en nuevos experimentos.
     """
@@ -34,5 +38,6 @@ class FeatureSetConfig:
     features_to_drop: List[str]
     target_encode_cols: List[str] = field(default_factory=list)
     te_smoothing_factor: float = 0.0
+    fold_te_cols: List[str] = field(default_factory=list)
     parent: Optional[str] = None
     deprecated: bool = False
