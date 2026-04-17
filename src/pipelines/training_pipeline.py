@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import joblib
 import mlflow
@@ -86,6 +86,41 @@ def _log_mlflow_training_flat(fs_name: str, metadata: Dict[str, Any], winner_nam
         mlflow.log_param(f"bp_{k}", str(v)[:250])
 
 
+def _make_fold_te_pipeline(model: Any, fold_te_cols: List[str]) -> Any:
+    """Envuelve un estimador en un Pipeline con TargetEncoder fold-aware.
+
+    El TargetEncoder (sklearn >= 1.3) computa el encoding por fold via fit_transform
+    interno (cv=5), eliminando el leakage de columnas de alta cardinalidad como LastName.
+    Al llamar predict/transform sobre datos nuevos aplica el encoding ajustado sin ver
+    las etiquetas del test set.
+
+    Args:
+        model: Estimador sklearn base.
+        fold_te_cols: Columnas a codificar con TargetEncoder fold-aware.
+
+    Returns:
+        Pipeline([ColumnTransformer(TargetEncoder), model]).
+    """
+    from sklearn.compose import ColumnTransformer  # pylint: disable=import-outside-toplevel
+    from sklearn.pipeline import Pipeline  # pylint: disable=import-outside-toplevel
+    from sklearn.preprocessing import TargetEncoder  # pylint: disable=import-outside-toplevel
+
+    te = TargetEncoder(target_type="binary", smooth="auto", cv=5, random_state=42)
+    ct = ColumnTransformer(
+        [("te", te, fold_te_cols)],
+        remainder="passthrough",
+        verbose_feature_names_out=False,
+    )
+    return Pipeline([("preprocessor", ct), ("model", model)])
+
+
+def _prefix_param_space(param_space_fn: Callable) -> Callable:
+    """Prefija 'model__' a los parametros de Optuna para uso dentro de un Pipeline."""
+    def wrapped(trial: Any) -> Dict:
+        return {f"model__{k}": v for k, v in param_space_fn(trial).items()}
+    return wrapped
+
+
 def run_training_pipeline(  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
     fs_name: str,
     model_name: Optional[str] = None,
@@ -128,8 +163,17 @@ def run_training_pipeline(  # pylint: disable=too-many-locals,too-many-branches,
         # Seleccion de modelos a evaluar
         # ------------------------------------------------------------------
         _NOT_TUNABLE = {"Baseline"}
+        fold_te_cols: List[str] = list(getattr(fs, "fold_te_cols", []))
 
         models_to_eval = {model_name: MODELS[model_name]} if model_name else MODELS
+
+        # Wrap en Pipeline con TargetEncoder fold-aware si el fs lo requiere
+        if fold_te_cols:
+            print(f"  Fold-aware TE activo para: {fold_te_cols}")
+            models_to_eval = {
+                name: _make_fold_te_pipeline(m, fold_te_cols)
+                for name, m in models_to_eval.items()
+            }
 
         print(f"\n[CV] Evaluando modelos: {list(models_to_eval.keys())}")
         cv_results = evaluate_models(models_to_eval, x_df, y, cv)
@@ -148,12 +192,26 @@ def run_training_pipeline(  # pylint: disable=too-many-locals,too-many-branches,
         best_params: dict = {}
         if tune and best_name in PARAM_SPACES:
             print(f"\n[TUNE] Tuneando {best_name} (n_iter={n_iter})...")
+            base_model = MODELS[best_name]
+            param_space_fn = PARAM_SPACES[best_name]
+            param_transform = None
+            if fold_te_cols:
+                base_model = _make_fold_te_pipeline(base_model, fold_te_cols)
+                param_space_fn = _prefix_param_space(param_space_fn)
+                param_transform = lambda p: {f"model__{k}": v for k, v in p.items()}
             tuned_model, best_params, tuned_cv_score = tune_model(
-                MODELS[best_name], PARAM_SPACES[best_name], x_df, y, cv, n_iter=n_iter
+                base_model, param_space_fn, x_df, y, cv, n_iter=n_iter,
+                param_transform=param_transform,
             )
+            # Eliminar el prefijo 'model__' de best_params para metadata legible
+            if fold_te_cols:
+                best_params = {k.replace("model__", ""): v for k, v in best_params.items()}
             print(f"  Mejor CV tuneado: {tuned_cv_score:.4f} | Params: {best_params}")
         else:
-            tuned_model = MODELS[best_name]
+            tuned_model = (
+                _make_fold_te_pipeline(MODELS[best_name], fold_te_cols)
+                if fold_te_cols else MODELS[best_name]
+            )
             print(f"\n[SKIP] Tuning omitido -- usando params por defecto de {best_name}")
 
         # ------------------------------------------------------------------
@@ -167,7 +225,10 @@ def run_training_pipeline(  # pylint: disable=too-many-locals,too-many-branches,
             print("\n[STACK] Construyendo Stacking...")
             top_names = [n for n in cv_results.index if n != "Baseline"][:3]
             print(f"  Base estimators: {top_names}")
-            base_estimators = [(name, MODELS[name]) for name in top_names]
+            base_estimators = [
+                (name, _make_fold_te_pipeline(MODELS[name], fold_te_cols) if fold_te_cols else MODELS[name])
+                for name in top_names
+            ]
             stacking_model, stacking_cv_score = build_stacking(
                 base_estimators, x_df, y, cv
             )
