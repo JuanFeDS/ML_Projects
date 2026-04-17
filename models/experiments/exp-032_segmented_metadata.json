@@ -1,0 +1,91 @@
+{
+  "exp_id": "032",
+  "fs_name": "fs-017_lastname_te",
+  "combined_oof_acc": 0.8146,
+  "segments": {
+    "cryo": {
+      "artifact": "C:\\Users\\jmart\\Documents\\Proyectos\\Data_Science\\06_Proyectos\\ML_Projects\\models\\experiments\\exp-032_CatBoost_cryo.pkl",
+      "feature_names": [
+        "Age",
+        "RoomService",
+        "FoodCourt",
+        "ShoppingMall",
+        "Spa",
+        "VRDeck",
+        "CabinNumber",
+        "GroupSize",
+        "HasSpending",
+        "SpendingCategories",
+        "TotalSpending_Log",
+        "LastName",
+        "CryoSleep_Encoded",
+        "Side_Encoded",
+        "Deck_TE",
+        "HomePlanet_TE",
+        "Destination_55 Cancri e",
+        "Destination_PSO J318.5-22",
+        "Destination_TRAPPIST-1e",
+        "Destination_Unknown",
+        "AgeCategory_Adult",
+        "AgeCategory_Child",
+        "AgeCategory_Senior",
+        "AgeCategory_Teen",
+        "AgeCategory_YoungAdult"
+      ],
+      "threshold": 0.507,
+      "oof_acc": 0.822,
+      "oof_roc": 0.8571,
+      "n_samples": 2955,
+      "best_params": {
+        "iterations": 100,
+        "depth": 5,
+        "learning_rate": 0.08104180632009925,
+        "l2_leaf_reg": 4.042942703223993,
+        "bagging_temperature": 0.7634181986377226
+      },
+      "seg_fs_name": "segment_cryo"
+    },
+    "active": {
+      "artifact": "C:\\Users\\jmart\\Documents\\Proyectos\\Data_Science\\06_Proyectos\\ML_Projects\\models\\experiments\\exp-032_CatBoost_active.pkl",
+      "feature_names": [
+        "Age",
+        "RoomService",
+        "FoodCourt",
+        "ShoppingMall",
+        "Spa",
+        "VRDeck",
+        "CabinNumber",
+        "GroupSize",
+        "HasSpending",
+        "SpendingCategories",
+        "TotalSpending_Log",
+        "LastName",
+        "CryoSleep_Encoded",
+        "Side_Encoded",
+        "Deck_TE",
+        "HomePlanet_TE",
+        "Destination_55 Cancri e",
+        "Destination_PSO J318.5-22",
+        "Destination_TRAPPIST-1e",
+        "Destination_Unknown",
+        "AgeCategory_Adult",
+        "AgeCategory_Child",
+        "AgeCategory_Senior",
+        "AgeCategory_Teen",
+        "AgeCategory_YoungAdult"
+      ],
+      "threshold": 0.5492,
+      "oof_acc": 0.8106,
+      "oof_roc": 0.8693,
+      "n_samples": 5559,
+      "best_params": {
+        "iterations": 600,
+        "depth": 5,
+        "learning_rate": 0.030869789842727865,
+        "l2_leaf_reg": 8.798740790315971,
+        "bagging_temperature": 0.7585443238764795
+      },
+      "seg_fs_name": "segment_active"
+    }
+  }
+}
