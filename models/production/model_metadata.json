@@ -1,13 +1,10 @@
 {
-  "exp_id": "026",
+  "exp_id": "031",
   "model_name": "CatBoost",
-  "feature_set_name": "fs-017_lastname_te",
-  "feature_set_description": "fs-004 + LastName con Target Encoding suavizado (k=30). LastName es proxy de familia: comparten HomePlanet, destino y comportamiento. TE suavizado bayesiano: TE=(n*mean+30*global_mean)/(n+30) previene leakage en apellidos raros (n=1-2 \u2192 TE\u2248global_mean\u22480.50).",
-  "feature_set_parent": "fs-004_target_encoding",
-  "features_added": [
-    "LastName",
-    "LastName_TE"
-  ],
+  "feature_set_name": "fs-019_pseudo_labeled",
+  "feature_set_description": "fs-017 con pseudo-labeling: entrenado sobre train.csv + 985 filas de test.csv donde exp-027 predice con confianza >= 0.95 (711 True, 274 False, confianza media 97.6%). Pipeline id\u00e9ntico a fs-017; diferencia es el tama\u00f1o del dataset de entrenamiento (8,693 \u2192 9,678 filas, +11.3%).",
+  "feature_set_parent": "fs-017_lastname_te",
+  "features_added": [],
   "features_removed": [],
   "numeric_features": [
     "Age",
@@ -21,23 +18,22 @@
     "TotalSpending_Log",
     "SpendingCategories",
     "Deck_TE",
-    "HomePlanet_TE",
-    "LastName_TE"
+    "HomePlanet_TE"
   ],
-  "val_accuracy": 0.8575,
-  "val_accuracy_default_threshold": 0.8564,
-  "val_roc_auc": 0.9379,
-  "cv_accuracy": 0.8547,
+  "val_accuracy": 0.8352,
+  "val_accuracy_default_threshold": 0.8342,
+  "val_roc_auc": 0.9246,
+  "cv_accuracy": 0.8347,
   "n_features": 25,
-  "n_train_samples": 8514,
+  "n_train_samples": 9472,
   "best_params": {
-    "iterations": 600,
-    "depth": 6,
-    "learning_rate": 0.06984284982015783,
-    "l2_leaf_reg": 17.09292634438464,
-    "bagging_temperature": 0.007697741191395324
+    "iterations": 400,
+    "depth": 4,
+    "learning_rate": 0.11971677241936392,
+    "l2_leaf_reg": 13.688056542097758,
+    "bagging_temperature": 0.9799558910910812
   },
-  "best_threshold": 0.5291,
+  "best_threshold": 0.5131,
   "feature_names": [
     "Age",
     "RoomService",
@@ -50,11 +46,11 @@
     "HasSpending",
     "SpendingCategories",
     "TotalSpending_Log",
+    "LastName",
     "CryoSleep_Encoded",
     "Side_Encoded",
     "Deck_TE",
     "HomePlanet_TE",
-    "LastName_TE",
     "Destination_55 Cancri e",
     "Destination_PSO J318.5-22",
     "Destination_TRAPPIST-1e",
