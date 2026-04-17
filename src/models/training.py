@@ -3,7 +3,7 @@ Utilidades de entrenamiento para modelos de clasificacion.
 
 Funciones reutilizables para evaluacion con CV, tuning (Optuna) y stacking.
 """
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -80,6 +80,7 @@ def tune_model(  # pylint: disable=too-many-arguments,too-many-positional-argume
     y_train: pd.Series,
     cv: StratifiedKFold,
     n_iter: int = 25,
+    param_transform: Optional[Callable[[Dict], Dict]] = None,
 ) -> Tuple[Any, Dict, float]:
     """Ajusta hiperparametros con Optuna (TPE sampler).
 
@@ -95,6 +96,9 @@ def tune_model(  # pylint: disable=too-many-arguments,too-many-positional-argume
         y_train: Target de entrenamiento.
         cv: Estrategia de cross-validation.
         n_iter: Numero de trials de Optuna.
+        param_transform: Callable opcional (dict) -> dict que transforma study.best_params
+            antes de llamar set_params en el modelo reconstruido. Util cuando model es un
+            Pipeline y los params necesitan prefijo (ej. 'model__depth' en vez de 'depth').
 
     Returns:
         Tupla (best_estimator, best_params, best_score).
@@ -136,8 +140,9 @@ def tune_model(  # pylint: disable=too-many-arguments,too-many-positional-argume
 
         best_params = study.best_params
         best_model = clone(model)
-        best_model.set_params(**best_params)
-        
+        params_to_set = param_transform(best_params) if param_transform else best_params
+        best_model.set_params(**params_to_set)
+
         # Log summary parameters to the parent run
         log_params_dict({f"best_{k}": v for k, v in best_params.items()})
         log_metrics_dict({"best_cv_accuracy": round(study.best_value, 4)})
