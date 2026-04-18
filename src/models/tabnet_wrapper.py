@@ -9,6 +9,7 @@ get_params / set_params para compatibilidad con Optuna.
 """
 import numpy as np
 import pandas as pd
+from pytorch_tabnet.tab_model import TabNetClassifier
 from sklearn.base import BaseEstimator, ClassifierMixin
 
 
@@ -81,8 +82,6 @@ class TabNetWrapper(BaseEstimator, ClassifierMixin):
         Returns:
             self
         """
-        from pytorch_tabnet.tab_model import TabNetClassifier  # pylint: disable=import-outside-toplevel
-
         x_np = self._to_numpy(X)
         y_np = np.array(y, dtype=int)
 

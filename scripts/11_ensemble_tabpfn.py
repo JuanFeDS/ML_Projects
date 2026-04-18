@@ -37,6 +37,7 @@ from src.config.settings import (  # noqa: E402
     TRAIN_RAW,
     get_scaler_path,
     get_target_encoder_path,
+    get_train_scaled,
 )
 from src.features.constants import TARGET  # noqa: E402
 from src.features.engineering import encode_cryosleep, encode_side  # noqa: E402
@@ -103,8 +104,6 @@ def _preprocess_047(df: pd.DataFrame, is_test: bool = False):
 
 def _val_proba_fs017(tag: str, scaler, target_encoder) -> tuple:
     """Probabilidades en val set (80/20) para un modelo fs-017."""
-    from src.config.settings import get_train_scaled  # pylint: disable=import-outside-toplevel
-
     df_scaled = pd.read_csv(get_train_scaled(FS_017))
     y_all = df_scaled[TARGET]
     x_all = df_scaled.drop(columns=[TARGET])
