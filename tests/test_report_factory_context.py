@@ -1,7 +1,7 @@
 """Tests del contexto de IA para reportes de entrenamiento."""
 import pandas as pd
 
-from src.reports.builder import build_training_insights_context
+from src.reports.factory import build_training_insights_context
 
 
 def _minimal_training_results():
