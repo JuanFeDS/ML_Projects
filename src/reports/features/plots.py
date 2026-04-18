@@ -4,6 +4,7 @@ Funciones de visualizacion para el script de feature engineering.
 Cada funcion recibe datos ya calculados y devuelve una figura Plotly.
 El script 02_features.py las orquesta junto con HTMLReport.
 """
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -75,8 +76,6 @@ def total_spending_compare(
     spending_cols = [
         "RoomService", "FoodCourt", "ShoppingMall", "Spa", "VRDeck"
     ]
-    import numpy as np  # pylint: disable=import-outside-toplevel
-
     df_tmp = df_raw.copy()
     df_tmp["TotalSpending"] = df_tmp[spending_cols].fillna(0).sum(axis=1)
     df_tmp["TotalSpending_Log"] = np.log1p(df_tmp["TotalSpending"])

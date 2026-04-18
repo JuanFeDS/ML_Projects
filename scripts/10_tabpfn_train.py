@@ -34,6 +34,8 @@ from sklearn.metrics import accuracy_score, roc_auc_score  # noqa: E402
 from sklearn.model_selection import StratifiedKFold  # noqa: E402
 
 from src.config.settings import EXPERIMENTS_DIR, SUBMISSIONS_DIR, TEST_RAW, TRAIN_RAW
+from src.features.constants import TARGET
+from src.features.feature_sets import FEATURE_SETS
 from src.features.engineering import encode_cryosleep, encode_side
 from src.features.feature_sets.pipelines import _pipeline_fs017
 from src.models.training import optimize_threshold
@@ -58,9 +60,6 @@ def _preprocess(df: pd.DataFrame, is_test: bool = False):
     Returns:
         (X, y) si is_test=False, X si is_test=True.
     """
-    from src.features.constants import TARGET  # pylint: disable=import-outside-toplevel
-    from src.features.feature_sets import FEATURE_SETS  # pylint: disable=import-outside-toplevel
-
     fs = FEATURE_SETS["fs-017_lastname_te"]
     out = fs.test_pipeline(df) if is_test else _pipeline_fs017(df)
 

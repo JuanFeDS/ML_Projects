@@ -14,6 +14,7 @@ Uso:
 """
 import argparse
 import json
+import os
 
 from dotenv import load_dotenv
 
@@ -21,7 +22,6 @@ from dotenv import load_dotenv
 load_dotenv()
 import torch  # noqa: E402
 from tabpfn_client import TabPFNClassifier, set_access_token  # noqa: E402
-import os  # noqa: E402
 
 set_access_token(os.environ["TABPFN_TOKEN"])
 
@@ -29,9 +29,12 @@ import joblib  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from catboost import CatBoostClassifier, Pool  # noqa: E402
+from sklearn.compose import ColumnTransformer  # noqa: E402
 from sklearn.linear_model import LogisticRegression  # noqa: E402
-from sklearn.model_selection import StratifiedKFold, cross_val_predict  # noqa: E402
 from sklearn.metrics import accuracy_score, roc_auc_score  # noqa: E402
+from sklearn.model_selection import StratifiedKFold, cross_val_predict  # noqa: E402
+from sklearn.pipeline import Pipeline as SKPipeline  # noqa: E402
+from sklearn.preprocessing import TargetEncoder  # noqa: E402
 
 from src.config.settings import (  # noqa: E402
     EXPERIMENTS_DIR,
@@ -40,23 +43,22 @@ from src.config.settings import (  # noqa: E402
     TRAIN_RAW,
     get_scaler_path,
     get_target_encoder_path,
+    get_train_scaled,
 )
 from src.features.constants import TARGET  # noqa: E402
-from src.features.engineering import encode_cryosleep, encode_side  # noqa: E402
 from src.features.feature_sets import FEATURE_SETS  # noqa: E402
-from src.features.feature_sets.pipelines import _pipeline_fs017  # noqa: E402
 from src.models.predict import preprocess_test  # noqa: E402
 from src.models.training import optimize_threshold  # noqa: E402
 from src.reports.experiments.log import get_next_exp_id  # noqa: E402
+from src.scripts.common import (  # noqa: E402
+    ALL_FEATURES_NATIVE,
+    CAT_FEATURES_NATIVE,
+    FS_NATIVE,
+    preprocess_native,
+)
 
-FS_017 = "fs-017_lastname_te"
-CAT_FEATURES = ["Deck", "HomePlanet", "Destination", "AgeCategory", "LastName"]
-NUMERIC_FEATURES = [
-    "Age", "RoomService", "FoodCourt", "ShoppingMall", "Spa", "VRDeck",
-    "GroupSize", "CabinNumber", "TotalSpending_Log", "SpendingCategories",
-    "HasSpending", "CryoSleep_Encoded", "Side_Encoded",
-]
-ALL_FEATURES_NATIVE = NUMERIC_FEATURES + CAT_FEATURES
+CAT_FEATURES = CAT_FEATURES_NATIVE
+FS_017 = FS_NATIVE
 
 EXP_033_PARAMS = {
     "iterations": 546, "depth": 7,
@@ -68,27 +70,8 @@ EXP_033_PARAMS = {
 }
 
 
-def _preprocess_native(df: pd.DataFrame, is_test: bool = False):
-    """Pipeline compartido por exp-033 y exp-047 (categoricas nativas)."""
-    fs = FEATURE_SETS[FS_017]
-    out = fs.test_pipeline(df) if is_test else _pipeline_fs017(df)
-    out["CryoSleep_Encoded"] = out["CryoSleep"].apply(encode_cryosleep)
-    out["Side_Encoded"] = out["Side"].apply(encode_side)
-    for col in CAT_FEATURES:
-        out[col] = out[col].fillna("Unknown").astype(str)
-    if not is_test:
-        y = out[TARGET].astype(int)
-        x = out[[c for c in ALL_FEATURES_NATIVE if c in out.columns]]
-        return x, y
-    return out[[c for c in ALL_FEATURES_NATIVE if c in out.columns]]
-
-
-def _build_027_pipeline():
+def _build_027_pipeline() -> SKPipeline:
     """Reconstruye el Pipeline de exp-027 desde cero (evita incompatibilidad sklearn 1.8→1.6)."""
-    from sklearn.compose import ColumnTransformer  # pylint: disable=import-outside-toplevel
-    from sklearn.pipeline import Pipeline as SKPipeline  # pylint: disable=import-outside-toplevel
-    from sklearn.preprocessing import TargetEncoder  # pylint: disable=import-outside-toplevel
-
     ct = ColumnTransformer(
         transformers=[("te", TargetEncoder(random_state=42, target_type="binary"), ["LastName"])],
         remainder="passthrough",
@@ -160,11 +143,9 @@ def main() -> None:
     print(f"  Exp ID: {exp_id}")
     print("=" * 60)
 
-    # --- Datos de entrenamiento ---
     df_raw = pd.read_csv(TRAIN_RAW)
-    x_native, y = _preprocess_native(df_raw)
+    x_native, y = preprocess_native(df_raw)
 
-    from src.config.settings import get_train_scaled  # pylint: disable=import-outside-toplevel
     df_scaled = pd.read_csv(get_train_scaled(FS_017))
     y_027 = df_scaled[TARGET]
     x_027 = df_scaled.drop(columns=[TARGET])
@@ -173,13 +154,11 @@ def main() -> None:
 
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
-    # --- Nivel 0: OOF ---
     print("\n[L0] Generando OOF (5-fold) para los 3 modelos base...")
     p027 = _oof_027(x_027, y_027, cv)
     p033 = _oof_033(x_native, y, cv)
     p047 = _oof_047(x_native, y, cv, args.n_estimators)
 
-    # --- Nivel 1: meta-learner ---
     print("\n[L1] Entrenando meta-learner LogisticRegression...")
     X_meta = np.column_stack([p027, p033, p047])
     meta = LogisticRegression(C=1.0, max_iter=1000, random_state=42)
@@ -191,7 +170,6 @@ def main() -> None:
           f"| acc(thr={threshold:.4f})={meta_acc:.4f} | ROC-AUC={roc:.4f}")
     print(f"  Coefs LR: 027={meta.coef_[0][0]:.3f}  033={meta.coef_[0][1]:.3f}  047={meta.coef_[0][2]:.3f}")
 
-    # --- Test: predicciones base ---
     print("\n[TEST] Generando predicciones en test...")
     df_test = pd.read_csv(TEST_RAW)
     test_ids = df_test["PassengerId"].copy()
@@ -208,7 +186,7 @@ def main() -> None:
     print(f"  [027] test shape: {x_test_027.shape}")
 
     model_033 = joblib.load(list(EXPERIMENTS_DIR.glob("exp-033_*.pkl"))[0])
-    x_test_native = _preprocess_native(df_test, is_test=True)
+    x_test_native = preprocess_native(df_test, is_test=True)
     pool_test = Pool(x_test_native, cat_features=CAT_FEATURES)
     p033_test = model_033.predict_proba(pool_test)[:, 1]
     print(f"  [033] test shape: {x_test_native.shape}")
@@ -217,7 +195,6 @@ def main() -> None:
     p047_test = model_047.predict_proba(x_test_native)[:, 1]
     print(f"  [047] test shape: {x_test_native.shape}")
 
-    # --- Meta-learner en test ---
     X_meta_test = np.column_stack([p027_test, p033_test, p047_test])
     meta_proba_test = meta.predict_proba(X_meta_test)[:, 1]
     predictions = (meta_proba_test >= threshold).astype(bool)
@@ -240,7 +217,11 @@ def main() -> None:
             "type": "stacking_lr_meta",
             "base_models": ["exp-027", "exp-033", "exp-047"],
             "meta_learner": "LogisticRegression(C=1.0)",
-            "lr_coefs": {"exp-027": meta.coef_[0][0], "exp-033": meta.coef_[0][1], "exp-047": meta.coef_[0][2]},
+            "lr_coefs": {
+                "exp-027": meta.coef_[0][0],
+                "exp-033": meta.coef_[0][1],
+                "exp-047": meta.coef_[0][2],
+            },
             "oof_acc_meta": meta_acc,
             "oof_roc_auc": roc,
             "threshold": threshold,

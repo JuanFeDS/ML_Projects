@@ -29,7 +29,9 @@ from src.config.settings import (
     TRAIN_RAW,
     get_scaler_path,
     get_target_encoder_path,
+    get_train_scaled,
 )
+from src.features.feature_sets.pipelines import _pipeline_fs017
 from src.features.constants import TARGET
 from src.features.engineering import encode_cryosleep, encode_side
 from src.features.feature_sets import FEATURE_SETS
@@ -94,8 +96,6 @@ def _val_probas_fs017(tags: list, df_train: pd.DataFrame, scaler, target_encoder
     Returns:
         Lista de arrays de probabilidades, array de etiquetas verdaderas.
     """
-    from src.config.settings import get_train_scaled  # pylint: disable=import-outside-toplevel
-
     df_scaled = pd.read_csv(get_train_scaled(FS_017))
     y_all = df_scaled[TARGET]
     x_all = df_scaled.drop(columns=[TARGET])
@@ -118,8 +118,6 @@ def _val_probas_fs017(tags: list, df_train: pd.DataFrame, scaler, target_encoder
 
 def _val_proba_033(df_train: pd.DataFrame) -> np.ndarray:
     """Probabilidades del val set para exp-033."""
-    from src.features.feature_sets.pipelines import _pipeline_fs017  # pylint: disable=import-outside-toplevel
-
     model = _find_model(EXP_033_TAG)
     out = _pipeline_fs017(df_train)
     out["CryoSleep_Encoded"] = out["CryoSleep"].apply(encode_cryosleep)

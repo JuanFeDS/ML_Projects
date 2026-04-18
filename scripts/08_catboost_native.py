@@ -24,59 +24,23 @@ from sklearn.metrics import accuracy_score, roc_auc_score
 from sklearn.model_selection import StratifiedKFold
 
 from src.config.settings import EXPERIMENTS_DIR, SUBMISSIONS_DIR, TEST_RAW, TRAIN_RAW
-from src.features.engineering import encode_cryosleep, encode_side
-from src.features.feature_sets.pipelines import _pipeline_fs017
 from src.models.training import optimize_threshold
 from src.reports.experiments.log import get_next_exp_id
+from src.scripts.common import (
+    ALL_FEATURES_NATIVE,
+    CAT_FEATURES_NATIVE,
+    NUMERIC_FEATURES_NATIVE,
+    preprocess_native,
+)
 
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-# Columnas que CatBoost manejara con Ordered Target Statistics
-CAT_FEATURES = ["Deck", "HomePlanet", "Destination", "AgeCategory", "LastName"]
+# Alias locales para compatibilidad con el resto del script
+CAT_FEATURES = CAT_FEATURES_NATIVE
+NUMERIC_FEATURES = NUMERIC_FEATURES_NATIVE
 
-# Columnas numericas (sin TE ni OHE derivadas)
-NUMERIC_FEATURES = [
-    "Age", "RoomService", "FoodCourt", "ShoppingMall", "Spa", "VRDeck",
-    "GroupSize", "CabinNumber", "TotalSpending_Log", "SpendingCategories",
-    "HasSpending", "CryoSleep_Encoded", "Side_Encoded",
-]
-
-# Columnas a eliminar del DataFrame
 COLS_TO_DROP = ["PassengerId", "Name", "Cabin", "TravelGroup", "CryoSleep",
                 "VIP", "Side", "TotalSpending", "Transported"]
-
-
-def _preprocess(df: pd.DataFrame, is_test: bool = False):
-    """Aplica transformaciones base y retorna (X, y) o X si is_test.
-
-    Args:
-        df: DataFrame crudo (train.csv o test.csv).
-        is_test: Si True usa test_pipeline (imputa Age NaN con mediana) y no
-            retorna y.
-
-    Returns:
-        Si is_test=False: tupla (X DataFrame, y Series).
-        Si is_test=True: X DataFrame.
-    """
-    from src.features.feature_sets import FEATURE_SETS  # pylint: disable=import-outside-toplevel
-    from src.features.constants import TARGET  # pylint: disable=import-outside-toplevel
-    fs = FEATURE_SETS["fs-017_lastname_te"]
-
-    out = fs.test_pipeline(df) if is_test else _pipeline_fs017(df)
-
-    out["CryoSleep_Encoded"] = out["CryoSleep"].apply(encode_cryosleep)
-    out["Side_Encoded"] = out["Side"].apply(encode_side)
-
-    # Convertir categoricas a string (CatBoost necesita str o int para cat_features)
-    for col in CAT_FEATURES:
-        out[col] = out[col].fillna("Unknown").astype(str)
-
-    if not is_test:
-        y = out[TARGET].astype(int)
-        X = out[[c for c in NUMERIC_FEATURES + CAT_FEATURES if c in out.columns]]
-        return X, y
-
-    return out[[c for c in NUMERIC_FEATURES + CAT_FEATURES if c in out.columns]]
 
 
 def _make_pool(X: pd.DataFrame, y: pd.Series | None = None) -> Pool:
@@ -166,14 +130,13 @@ def main() -> None:
     print("=" * 60)
 
     df_raw = pd.read_csv(TRAIN_RAW)
-    X, y = _preprocess(df_raw)
+    X, y = preprocess_native(df_raw)
     print(f"\nDataset: {X.shape[0]:,} filas x {X.shape[1]} features")
     print(f"  Numericas : {NUMERIC_FEATURES}")
     print(f"  Categoricas: {CAT_FEATURES}")
 
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
-    # Tuning (con persistencia en SQLite para reanudar si falla)
     study_db = str(EXPERIMENTS_DIR / f"exp-{exp_id}_catboost_native_study.db")
     params_cache = EXPERIMENTS_DIR / f"exp-{exp_id}_catboost_native_best_params.json"
 
@@ -186,13 +149,11 @@ def main() -> None:
         print("\n[TUNE] Tuneando CatBoost con Optuna...")
         best_params = _tune(X, y, cv, args.n_iter, study_db)
         best_params["random_seed"] = 42
-        # Guardar antes de OOF para no perder en caso de error
         cache_data = {**best_params, "_cv_score": best_params.get("_cv_score", "ver study db")}
         with open(params_cache, "w", encoding="utf-8") as f:
             json.dump(best_params, f, indent=2)
         print(f"  Best params guardados: {params_cache.name}")
 
-    # OOF honesto
     print("\n[OOF] Calculando predicciones out-of-fold...")
     oof_p = _oof_proba(best_params, X, y, cv)
     oof_acc = round(float(accuracy_score(y, (oof_p >= 0.5).astype(int))), 4)
@@ -200,7 +161,6 @@ def main() -> None:
     threshold, thr_acc = optimize_threshold(y, oof_p)
     print(f"  OOF acc={oof_acc:.4f} | ROC-AUC={oof_roc:.4f} | thr={threshold:.4f} -> {thr_acc:.4f}")
 
-    # Refit final sobre dataset completo
     print("\n[FIT] Entrenando modelo final sobre dataset completo...")
     final_model = CatBoostClassifier(**best_params, verbose=0, allow_writing_files=False)
     final_model.fit(_make_pool(X, y))
@@ -209,13 +169,12 @@ def main() -> None:
     joblib.dump(final_model, artifact)
     print(f"  Guardado: {artifact.name}")
 
-    # Metadata
     meta = {
         "exp_id": exp_id,
         "model": "CatBoost_native",
         "cat_features": CAT_FEATURES,
         "numeric_features": NUMERIC_FEATURES,
-        "feature_names": NUMERIC_FEATURES + CAT_FEATURES,
+        "feature_names": ALL_FEATURES_NATIVE,
         "oof_acc": oof_acc,
         "oof_acc_with_threshold": thr_acc,
         "oof_roc_auc": oof_roc,
@@ -227,11 +186,10 @@ def main() -> None:
     with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2)
 
-    # Submission
     print("\n[PREDICT] Generando submission...")
     df_test = pd.read_csv(TEST_RAW)
     test_ids = df_test["PassengerId"].copy()
-    X_test = _preprocess(df_test, is_test=True)
+    X_test = preprocess_native(df_test, is_test=True)
 
     y_proba_test = final_model.predict_proba(_make_pool(X_test))[:, 1]
     predictions = (y_proba_test >= threshold).astype(bool)

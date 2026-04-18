@@ -9,13 +9,15 @@ from __future__ import annotations
 
 import json
 import shutil
-import subprocess
 from typing import Any, Callable, Dict, List, Optional
 
 import joblib
 import mlflow
 import pandas as pd
+from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import StratifiedKFold
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import TargetEncoder
 
 from src.config.settings import (
     DOCS_DIR,
@@ -47,34 +49,14 @@ from src.reports.experiments.log import (
     is_duplicate_experiment,
 )
 from src.reports.experiments.model_cards import write_experiment_card, write_model_card
-
-
-def _get_git_commit() -> str:
-    """Retorna el hash corto del commit HEAD, o 'unknown' si falla."""
-    try:
-        return subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL
-        ).decode().strip()
-    except Exception:  # pylint: disable=broad-except
-        return "unknown"
-
-
-def _create_git_tag(exp_id: str, fs_name: str, val_accuracy: float) -> None:
-    """Crea un git tag para el experimento promovido."""
-    tag = f"exp-{exp_id}_{fs_name}_{val_accuracy:.4f}"
-    try:
-        subprocess.run(
-            ["git", "tag", tag], check=True, stderr=subprocess.DEVNULL
-        )
-        print(f"  [TAG] Git tag creado: {tag}")
-    except subprocess.CalledProcessError:
-        print(f"  [WARN] No se pudo crear git tag '{tag}' (ya existe?)")
+from src.reports.training.shap_plots import compute_shap_plots
+from src.config.vcs import create_git_tag, get_git_commit
 
 
 def _log_mlflow_training_flat(fs_name: str, metadata: Dict[str, Any], winner_name: str) -> None:
     """Registra parametros y metricas escalares (MLflow no acepta dicts anidados)."""
     mlflow.set_tag("feature_set", fs_name)
-    mlflow.set_tag("git_commit", _get_git_commit())
+    mlflow.set_tag("git_commit", get_git_commit())
     mlflow.log_param("feature_set", fs_name)
     mlflow.log_param("winner_model", str(winner_name)[:250])
     mlflow.log_param("exp_id", str(metadata.get("exp_id", "")))
@@ -101,10 +83,6 @@ def _make_fold_te_pipeline(model: Any, fold_te_cols: List[str]) -> Any:
     Returns:
         Pipeline([ColumnTransformer(TargetEncoder), model]).
     """
-    from sklearn.compose import ColumnTransformer  # pylint: disable=import-outside-toplevel
-    from sklearn.pipeline import Pipeline  # pylint: disable=import-outside-toplevel
-    from sklearn.preprocessing import TargetEncoder  # pylint: disable=import-outside-toplevel
-
     te = TargetEncoder(target_type="binary", smooth="auto", cv=5, random_state=42)
     ct = ColumnTransformer(
         [("te", te, fold_te_cols)],
@@ -392,7 +370,7 @@ def run_training_pipeline(  # pylint: disable=too-many-locals,too-many-branches,
                     json.dump(metadata, f, indent=2, default=str)
                 label = "NUEVO MEJOR MODELO" if current_best_acc else "primer modelo"
                 print(f"  [PROD] [{label}] Promovido a produccion: {MODEL_PATH}")
-                _create_git_tag(exp_id, fs_name, effective_acc)
+                create_git_tag(exp_id, fs_name, effective_acc)
             else:
                 print(
                     f"  [--] No promovido -- val_accuracy {effective_acc:.4f} "
@@ -433,7 +411,6 @@ def run_training_pipeline(  # pylint: disable=too-many-locals,too-many-branches,
         # ------------------------------------------------------------------
         shap_plots: dict = {}
         if compute_shap:
-            from src.reports.training.shap_plots import compute_shap_plots  # pylint: disable=import-outside-toplevel
             print("\n[SHAP] Generando analisis SHAP...")
             shap_plots = compute_shap_plots(
                 model=winner_model,
