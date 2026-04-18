@@ -1,0 +1,59 @@
+{
+  "exp_id": "033",
+  "model": "CatBoost_native",
+  "cat_features": [
+    "Deck",
+    "HomePlanet",
+    "Destination",
+    "AgeCategory",
+    "LastName"
+  ],
+  "numeric_features": [
+    "Age",
+    "RoomService",
+    "FoodCourt",
+    "ShoppingMall",
+    "Spa",
+    "VRDeck",
+    "GroupSize",
+    "CabinNumber",
+    "TotalSpending_Log",
+    "SpendingCategories",
+    "HasSpending",
+    "CryoSleep_Encoded",
+    "Side_Encoded"
+  ],
+  "feature_names": [
+    "Age",
+    "RoomService",
+    "FoodCourt",
+    "ShoppingMall",
+    "Spa",
+    "VRDeck",
+    "GroupSize",
+    "CabinNumber",
+    "TotalSpending_Log",
+    "SpendingCategories",
+    "HasSpending",
+    "CryoSleep_Encoded",
+    "Side_Encoded",
+    "Deck",
+    "HomePlanet",
+    "Destination",
+    "AgeCategory",
+    "LastName"
+  ],
+  "oof_acc": 0.8177,
+  "oof_acc_with_threshold": 0.8191,
+  "oof_roc_auc": 0.9083,
+  "threshold": 0.493,
+  "best_params": {
+    "iterations": 546,
+    "depth": 7,
+    "learning_rate": 0.07071005741224391,
+    "l2_leaf_reg": 21.119964967140604,
+    "bagging_temperature": 0.8011251001518414,
+    "random_seed": 42
+  },
+  "n_train_samples": 8514
+}
