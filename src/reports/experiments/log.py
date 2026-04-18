@@ -53,25 +53,44 @@ def is_duplicate_experiment(metadata: dict, log_path: str) -> bool:
     return False
 
 
-def get_next_exp_id(log_path: str) -> str:
+def get_next_exp_id(log_path: str, artifacts_dir: Optional[str] = None) -> str:
     """Devuelve el proximo ID de experimento sin escribir nada.
 
-    Permite obtener el ID antes de entrenar, para nombrar el artefacto
-    con el mismo ID que aparecera en el log y la card.
+    Toma el maximo entre las entradas del log y los artefactos en disco
+    (prefijo exp-NNN_*) para evitar colisiones cuando un script no escribe
+    al log antes de que otro script corra.
 
     Args:
         log_path: Ruta del archivo experimentation_log.md.
+        artifacts_dir: Directorio donde buscar artefactos exp-NNN_*. Si es
+            None, se infiere como models/experiments/ relativo al log.
 
     Returns:
         ID como string zero-padded, e.g. '003'.
     """
+    import re
+
     out = Path(log_path)
     existing = out.read_text(encoding="utf-8") if out.exists() else ""
     is_template = not existing or "## Experimentos" in existing or "EXP-001" in existing
-    if is_template:
+    log_count = 0 if is_template else existing.count("\n## Exp-")
+
+    # Scan artifacts dir for exp-NNN_* filenames
+    if artifacts_dir is None:
+        artifacts_dir = str(out.parent.parent.parent / "models" / "experiments")
+    arts_dir = Path(artifacts_dir)
+    artifact_max = 0
+    if arts_dir.exists():
+        pattern = re.compile(r"^exp-(\d{3})_")
+        for f in arts_dir.iterdir():
+            m = pattern.match(f.name)
+            if m:
+                artifact_max = max(artifact_max, int(m.group(1)))
+
+    next_id = max(log_count, artifact_max) + 1
+    if is_template and artifact_max == 0:
         return "001"
-    count = existing.count("\n## Exp-")
-    return f"{count + 1:03d}"
+    return f"{next_id:03d}"
 
 
 def append_experiment_log(  # pylint: disable=too-many-arguments,too-many-positional-arguments
