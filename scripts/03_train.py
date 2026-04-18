@@ -11,7 +11,7 @@ import argparse
 from src.features.feature_sets import DEFAULT_FEATURE_SET, FEATURE_SETS
 from src.models.catalogue import MODELS
 from src.pipelines.training_pipeline import run_training_pipeline
-from src.reports.builder import ReportFactory
+from src.reports.factory import ReportFactory
 
 
 def main() -> None:
