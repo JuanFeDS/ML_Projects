@@ -1,0 +1,47 @@
+{
+  "exp_id": "054",
+  "model": "CatBoost_GroupKFold",
+  "cv_strategy": "GroupKFold(n_splits=5, group=LastName)",
+  "threshold": 0.5,
+  "oof_acc": 0.8144,
+  "oof_roc_auc": 0.9065,
+  "cat_features": [
+    "Deck",
+    "HomePlanet",
+    "Destination",
+    "AgeCategory",
+    "LastName"
+  ],
+  "feature_names": [
+    "Age",
+    "RoomService",
+    "FoodCourt",
+    "ShoppingMall",
+    "Spa",
+    "VRDeck",
+    "GroupSize",
+    "CabinNumber",
+    "TotalSpending_Log",
+    "SpendingCategories",
+    "HasSpending",
+    "CryoSleep_Encoded",
+    "Side_Encoded",
+    "Deck",
+    "HomePlanet",
+    "Destination",
+    "AgeCategory",
+    "LastName"
+  ],
+  "n_train_samples": 8514,
+  "n_groups": 2209,
+  "catboost_params": {
+    "iterations": 546,
+    "depth": 7,
+    "learning_rate": 0.07071005741224391,
+    "l2_leaf_reg": 21.119964967140604,
+    "bagging_temperature": 0.8011251001518414,
+    "random_seed": 42,
+    "verbose": 0,
+    "allow_writing_files": false
+  }
+}
