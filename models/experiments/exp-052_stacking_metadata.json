@@ -1,0 +1,18 @@
+{
+  "exp_id": "052",
+  "type": "stacking_lr_meta",
+  "base_models": [
+    "exp-027",
+    "exp-033",
+    "exp-047"
+  ],
+  "meta_learner": "LogisticRegression(C=1.0)",
+  "lr_coefs": {
+    "exp-027": 1.2730646044153906,
+    "exp-033": 1.6816636695549663,
+    "exp-047": 3.239463142729797
+  },
+  "oof_acc_meta": 0.8204,
+  "oof_roc_auc": 0.9098552471021608,
+  "threshold": 0.5513
+}
