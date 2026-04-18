@@ -1,0 +1,52 @@
+{
+  "exp_id": "047",
+  "model": "TabPFN",
+  "cat_features": [
+    "Deck",
+    "HomePlanet",
+    "Destination",
+    "AgeCategory",
+    "LastName"
+  ],
+  "numeric_features": [
+    "Age",
+    "RoomService",
+    "FoodCourt",
+    "ShoppingMall",
+    "Spa",
+    "VRDeck",
+    "GroupSize",
+    "CabinNumber",
+    "TotalSpending_Log",
+    "SpendingCategories",
+    "HasSpending",
+    "CryoSleep_Encoded",
+    "Side_Encoded"
+  ],
+  "feature_names": [
+    "Age",
+    "RoomService",
+    "FoodCourt",
+    "ShoppingMall",
+    "Spa",
+    "VRDeck",
+    "GroupSize",
+    "CabinNumber",
+    "TotalSpending_Log",
+    "SpendingCategories",
+    "HasSpending",
+    "CryoSleep_Encoded",
+    "Side_Encoded",
+    "Deck",
+    "HomePlanet",
+    "Destination",
+    "AgeCategory",
+    "LastName"
+  ],
+  "n_estimators": 8,
+  "oof_acc": 0.8168,
+  "oof_acc_with_threshold": 0.8182,
+  "oof_roc_auc": 0.908,
+  "threshold": 0.4809,
+  "n_train_samples": 8514
+}
