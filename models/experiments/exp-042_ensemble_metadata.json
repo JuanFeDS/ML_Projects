@@ -1,0 +1,14 @@
+{
+  "exp_id": "042",
+  "type": "ensemble_soft_voting",
+  "models": [
+    "exp-027",
+    "exp-033"
+  ],
+  "weights": {
+    "exp-027": 0.125,
+    "exp-033": 0.875
+  },
+  "threshold": 0.5111,
+  "val_accuracy": 0.8655
+}
