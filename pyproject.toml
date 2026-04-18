@@ -15,6 +15,7 @@ dependencies = [
     "lightgbm==4.6.0",
     "xgboost==3.2.0",
     "catboost==1.2.10",
+    "tabpfn==7.1.1",
     "optuna==4.8.0",
     "joblib==1.4.0",
     # Visualizacion
