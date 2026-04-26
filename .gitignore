@@ -3,8 +3,10 @@
 *.txt
 .vscode
 *.xlsx
-*.md
 *.pkl
+
+# Directorios de trabajo (no para portafolio)
+ignore/
 
 # Directories
 .claude/
