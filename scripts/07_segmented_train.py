@@ -21,11 +21,8 @@ import json
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.compose import ColumnTransformer
 from sklearn.metrics import accuracy_score, roc_auc_score
 from sklearn.model_selection import StratifiedKFold, cross_val_predict
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import TargetEncoder
 
 from src.config.settings import (
     EXPERIMENTS_DIR,
@@ -37,34 +34,15 @@ from src.config.settings import (
 )
 from src.features.feature_sets import FEATURE_SETS
 from src.models.catalogue import MODELS, PARAM_SPACES
+from src.models.evaluation import optimize_threshold
+from src.models.pipeline_utils import add_model_prefix, make_fold_te_pipeline, prefix_param_space
 from src.models.predict import preprocess_test
-from src.models.training import optimize_threshold, tune_model
+from src.models.tuning import tune_model
 from src.pipelines.data_pipeline import run_ingestion_to_features_pipeline
 from src.reports.experiments.log import get_next_exp_id
 
 FS_NAME = "fs-017_lastname_te"
 FOLD_TE_COLS = ["LastName"]
-
-
-def _make_te_pipeline(model):
-    te = TargetEncoder(target_type="binary", smooth="auto", cv=5, random_state=42)
-    ct = ColumnTransformer(
-        [("te", te, FOLD_TE_COLS)],
-        remainder="passthrough",
-        verbose_feature_names_out=False,
-    )
-    return Pipeline([("preprocessor", ct), ("model", model)])
-
-
-def _prefix_space(param_space_fn):
-    """Prefija 'model__' a los params de Optuna para uso en un Pipeline."""
-    def wrapped(trial):
-        return {f"model__{k}": v for k, v in param_space_fn(trial).items()}
-    return wrapped
-
-
-def _add_prefix(params):
-    return {f"model__{k}": v for k, v in params.items()}
 
 
 def train_segment(df_seg, fs, cv, n_iter, seg_name, exp_id):
@@ -91,13 +69,13 @@ def train_segment(df_seg, fs, cv, n_iter, seg_name, exp_id):
     y = results["y"]
     print(f"  Features: {X.shape[1]} | Target rate: {y.mean():.3f}")
 
-    pipeline = _make_te_pipeline(MODELS["CatBoost"])
+    pipeline = make_fold_te_pipeline(MODELS["CatBoost"], FOLD_TE_COLS)
     tuned, best_params, cv_score = tune_model(
         pipeline,
-        _prefix_space(PARAM_SPACES["CatBoost"]),
+        prefix_param_space(PARAM_SPACES["CatBoost"]),
         X, y, cv,
         n_iter=n_iter,
-        param_transform=_add_prefix,
+        param_transform=add_model_prefix,
     )
     print(f"  Mejor CV tuneado: {cv_score:.4f}")
 
