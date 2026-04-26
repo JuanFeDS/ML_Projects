@@ -10,7 +10,7 @@ import argparse
 
 from src.features.feature_sets import DEFAULT_FEATURE_SET, FEATURE_SETS
 from src.models.catalogue import MODELS
-from src.pipelines.training_pipeline import run_training_pipeline
+from src.pipelines.training_pipeline import TrainingPipeline
 from src.reports.factory import ReportFactory
 
 
@@ -67,7 +67,7 @@ def main() -> None:
     print(f"  SHAP        : {'si' if args.shap else 'no'}")
     print("=" * 60)
 
-    results = run_training_pipeline(
+    results = TrainingPipeline(
         fs_name=args.feature_set,
         model_name=args.model,
         tune=not args.no_tune,
@@ -75,7 +75,7 @@ def main() -> None:
         build_moe_flag=not args.no_moe,
         compute_shap=args.shap,
         n_iter=args.n_iter,
-    )
+    ).run()
     ReportFactory.emit_training_reports(results)
 
     print("\n[OK] Pipeline de entrenamiento completado.")
