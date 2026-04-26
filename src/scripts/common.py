@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Tuple, Union
 
+import numpy as np
 import pandas as pd
 
 from src.features.constants import TARGET
@@ -55,3 +56,39 @@ def preprocess_native(
         return out[feat_cols], y
 
     return out[feat_cols]
+
+
+def preprocess_native_with_groups(
+    df: pd.DataFrame, is_test: bool = False
+) -> Union[
+    Tuple[pd.DataFrame, pd.Series, np.ndarray],
+    Tuple[pd.DataFrame, np.ndarray],
+]:
+    """Como preprocess_native pero tambien retorna grupos de LastName.
+
+    Necesario para GroupKFold (validacion honesta sin leakage de familia).
+
+    Args:
+        df: DataFrame crudo (train.csv o test.csv).
+        is_test: Si True, no retorna y.
+
+    Returns:
+        (X, y, groups) si is_test=False; (X, groups) si is_test=True.
+    """
+    fs = FEATURE_SETS[FS_NATIVE]
+    out = fs.test_pipeline(df) if is_test else _pipeline_fs017(df)
+
+    out["CryoSleep_Encoded"] = out["CryoSleep"].apply(encode_cryosleep)
+    out["Side_Encoded"] = out["Side"].apply(encode_side)
+
+    for col in CAT_FEATURES_NATIVE:
+        out[col] = out[col].fillna("Unknown").astype(str)
+
+    groups = out["LastName"].values
+    feat_cols = [c for c in ALL_FEATURES_NATIVE if c in out.columns]
+
+    if not is_test:
+        y = out[TARGET].astype(int)
+        return out[feat_cols], y, groups
+
+    return out[feat_cols], groups
