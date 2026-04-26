@@ -24,10 +24,10 @@ def _top_feature_names_for_insights(
 
 
 def build_training_insights_context(results: Dict[str, Any]) -> Dict[str, Any]:
-    """Construye el dict esperado por get_training_insights desde run_training_pipeline.
+    """Construye el dict esperado por get_training_insights desde TrainingPipeline.run().
 
     Args:
-        results: Salida de src.pipelines.training_pipeline.run_training_pipeline.
+        results: Salida de src.pipelines.training_pipeline.TrainingPipeline.run().
 
     Returns:
         Dict con métricas y metadatos para el reporte de insights.
@@ -71,7 +71,7 @@ class ReportFactory:
         """Escribe reports/03_training.md y reports/03_training.html.
 
         Args:
-            results: Salida de src.pipelines.training_pipeline.run_training_pipeline.
+            results: Salida de src.pipelines.training_pipeline.TrainingPipeline.run().
         """
         exp_id = results["metadata"]["exp_id"]
         winner_name = results["winner_name"]
