@@ -5,6 +5,7 @@ Consulta el tracking store de MLflow y genera un reporte HTML interactivo
 con leaderboard, progresion de accuracy, diagnostico de sobreajuste,
 distribucion de trials Optuna y tasas de prediccion por submission.
 """
+
 from pathlib import Path
 
 from src.config.settings import REPORTS_DIR
