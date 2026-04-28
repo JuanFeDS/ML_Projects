@@ -14,10 +14,11 @@ Output:
 Ambos tienen la misma estructura que los CSVs originales.
 Usalos en lugar de data/raw/ con --train-path y --test-path.
 """
+
 import pandas as pd
 
 from src.config.settings import DATA_PROCESSED_DIR, TEST_RAW, TRAIN_RAW
-from src.data.transductive import IMPUTE_COLS, run_transductive_imputation
+from src.features.transductive import IMPUTE_COLS, run_transductive_imputation
 
 
 def main() -> None:
@@ -33,8 +34,10 @@ def main() -> None:
     print("\n[...] Aplicando imputacion transductiva...")
     train_out, test_out = run_transductive_imputation(df_train, df_test)
 
-    print(f"\n  {'Columna':<14} {'Train NaN orig':>14} {'Train NaN post':>14} "
-          f"{'Test NaN orig':>13} {'Test NaN post':>13}")
+    print(
+        f"\n  {'Columna':<14} {'Train NaN orig':>14} {'Train NaN post':>14} "
+        f"{'Test NaN orig':>13} {'Test NaN post':>13}"
+    )
     for col in IMPUTE_COLS:
         t_orig = df_train[col].isna().sum() if col in df_train else 0
         t_post = train_out[col].isna().sum() if col in train_out else 0

@@ -1,4 +1,5 @@
 """Imputacion transductiva train + test con propagacion de contexto de grupo."""
+
 from __future__ import annotations
 
 import pandas as pd
@@ -12,8 +13,14 @@ from src.features.engineering.base import (
 
 _SPLIT_COL = "_split"
 IMPUTE_COLS = [
-    "HomePlanet", "CryoSleep", "Age",
-    "RoomService", "FoodCourt", "ShoppingMall", "Spa", "VRDeck",
+    "HomePlanet",
+    "CryoSleep",
+    "Age",
+    "RoomService",
+    "FoodCourt",
+    "ShoppingMall",
+    "Spa",
+    "VRDeck",
 ]
 
 
