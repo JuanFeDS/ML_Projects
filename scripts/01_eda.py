@@ -4,6 +4,7 @@
 Este script orquesta el analisis estadistico y la generacion de reportes
 para el dataset Spaceship Titanic, utilizando la logica modular en src/.
 """
+
 import pandas as pd
 
 import mlflow
@@ -23,6 +24,7 @@ from src.pipelines.eda import (
     run_group_analysis,
 )
 from src.reports.eda.reports import build_eda_report
+
 
 def main():
     """Ejecuta el flujo secuencial de EDA."""
@@ -65,7 +67,9 @@ def main():
         print("  - [X] Analisis bivariado (CryoSleep x HomePlanet, Deck, Age)")
 
         group_res = run_group_analysis(df)
-        print("  - [X] Analisis de grupos (solo vs agrupado, CryoSleep grupal, familia)")
+        print(
+            "  - [X] Analisis de grupos (solo vs agrupado, CryoSleep grupal, familia)"
+        )
 
         # 3. Consolidar resultados
         results = {
@@ -85,13 +89,16 @@ def main():
         build_eda_report(df, results)
 
         # Registrar metadatos basicos en MLflow
-        mlflow.log_params({
-            "rows": basic_res["shape"][0],
-            "cols": basic_res["shape"][1],
-            "target_balance": f"{target_res['pcts'].get(True, 0):.1f}%"
-        })
+        mlflow.log_params(
+            {
+                "rows": basic_res["shape"][0],
+                "cols": basic_res["shape"][1],
+                "target_balance": f"{target_res['pcts'].get(True, 0):.1f}%",
+            }
+        )
 
     print("\n[OK] EDA finalizado exitosamente.")
+
 
 if __name__ == "__main__":
     main()

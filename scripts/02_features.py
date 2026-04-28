@@ -4,6 +4,7 @@
 Este script orquesta el pipeline de transformación, encoding y escalado
 del dataset para un feature set seleccionado, delegando la lógica a src/.
 """
+
 import argparse
 
 import pandas as pd
@@ -13,16 +14,24 @@ from src.config.settings import get_train_features, get_train_scaled, TRAIN_RAW
 from src.features.constants import TARGET
 from src.features.feature_sets import DEFAULT_FEATURE_SET, FEATURE_SETS
 from src.models.tracking import mlrun
-from src.pipelines.data_pipeline import load_raw_train, run_ingestion_to_features_pipeline
+from src.pipelines.data_pipeline import (
+    load_raw_train,
+    run_ingestion_to_features_pipeline,
+)
 from src.reports.features.reports import build_feature_report
 
 
 def main():
     """Ejecuta el flujo secuencial de feature engineering."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("--feature-set", default=DEFAULT_FEATURE_SET, choices=list(FEATURE_SETS.keys()))
-    parser.add_argument("--train-path", default=None,
-                        help="Ruta alternativa al CSV de entrenamiento (e.g. data/processed/train_transductive.csv)")
+    parser.add_argument(
+        "--feature-set", default=DEFAULT_FEATURE_SET, choices=list(FEATURE_SETS.keys())
+    )
+    parser.add_argument(
+        "--train-path",
+        default=None,
+        help="Ruta alternativa al CSV de entrenamiento (e.g. data/processed/train_transductive.csv)",
+    )
     args = parser.parse_args()
     fs_name = args.feature_set
     fs = FEATURE_SETS[fs_name]
@@ -34,13 +43,17 @@ def main():
     # 2. Carga de datos
     if args.train_path:
         df_raw = pd.read_csv(args.train_path)
-        print(f"[OK] Datos cargados desde {args.train_path}: {df_raw.shape[0]:,} registros")
+        print(
+            f"[OK] Datos cargados desde {args.train_path}: {df_raw.shape[0]:,} registros"
+        )
     else:
         df_raw = load_raw_train()
         print(f"[OK] Datos crudos cargados: {df_raw.shape[0]:,} registros")
 
     # Iniciar seguimiento de MLflow (sera child run si hay un parent activo)
-    with mlrun(f"02_Features_{fs_name}", tags={"stage": "features", "fs": fs_name}) as run:
+    with mlrun(
+        f"02_Features_{fs_name}", tags={"stage": "features", "fs": fs_name}
+    ) as run:
 
         # 3. Ejecutar Pipeline de Caracteristicas (Modularizado)
         print("\n[...] Ejecutando transformaciones y encoding...")
@@ -77,13 +90,16 @@ def main():
         build_feature_report(df_raw, results, fs_name, fs.description)
 
         # Tracking en MLflow
-        mlflow.log_params({
-            "fs_name": fs_name,
-            "n_features": meta["n_features"],
-            "n_samples": meta["n_samples"]
-        })
+        mlflow.log_params(
+            {
+                "fs_name": fs_name,
+                "n_features": meta["n_features"],
+                "n_samples": meta["n_samples"],
+            }
+        )
 
     print("\n[OK] Feature Engineering finalizado exitosamente.")
+
 
 if __name__ == "__main__":
     main()
