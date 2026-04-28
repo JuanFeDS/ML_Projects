@@ -7,6 +7,7 @@ Dimensiones de análisis:
 - Por servicio: correlación con target y tasa de transporte entre gastadores vs no.
 - Perfil de gasto: cuántos servicios usa cada pasajero.
 """
+
 from typing import Any, Dict
 
 import numpy as np
@@ -34,17 +35,23 @@ def compute_per_service_stats(df: pd.DataFrame) -> pd.DataFrame:
         pct_zero = round((values == 0).mean() * 100, 2)
         r_p, _ = stats.pearsonr(np.log1p(values), target_vals)
         spender_mask = values > 0
-        transport_spender = df.loc[spender_mask, TARGET].mean() if spender_mask.sum() > 0 else None
+        transport_spender = (
+            df.loc[spender_mask, TARGET].mean() if spender_mask.sum() > 0 else None
+        )
         transport_non = df.loc[~spender_mask, TARGET].mean()
         median_spender = values[spender_mask].median() if spender_mask.sum() > 0 else 0
-        rows.append({
-            "Servicio": col,
-            "% sin gasto": pct_zero,
-            "r Pearson (log)": round(r_p, 4),
-            "Transported (gasta)": round(transport_spender, 4) if transport_spender else None,
-            "Transported (no gasta)": round(transport_non, 4),
-            "Mediana (gastadores)": round(median_spender, 1),
-        })
+        rows.append(
+            {
+                "Servicio": col,
+                "% sin gasto": pct_zero,
+                "r Pearson (log)": round(r_p, 4),
+                "Transported (gasta)": (
+                    round(transport_spender, 4) if transport_spender else None
+                ),
+                "Transported (no gasta)": round(transport_non, 4),
+                "Mediana (gastadores)": round(median_spender, 1),
+            }
+        )
     return pd.DataFrame(rows)
 
 
@@ -64,14 +71,16 @@ def compute_zero_inflation(df: pd.DataFrame) -> dict:
     all_zero_pct = round(all_zero_mask.mean() * 100, 2)
 
     cryo_true = df["CryoSleep"].isin([True, "True"])
-    zero_by_cryo = pd.DataFrame({
-        "Segmento": ["CryoSleep=True", "CryoSleep=False/Unknown"],
-        "% todos en cero": [
-            round((values[cryo_true] == 0).all(axis=1).mean() * 100, 2),
-            round((values[~cryo_true] == 0).all(axis=1).mean() * 100, 2),
-        ],
-        "n": [cryo_true.sum(), (~cryo_true).sum()],
-    })
+    zero_by_cryo = pd.DataFrame(
+        {
+            "Segmento": ["CryoSleep=True", "CryoSleep=False/Unknown"],
+            "% todos en cero": [
+                round((values[cryo_true] == 0).all(axis=1).mean() * 100, 2),
+                round((values[~cryo_true] == 0).all(axis=1).mean() * 100, 2),
+            ],
+            "n": [cryo_true.sum(), (~cryo_true).sum()],
+        }
+    )
 
     return {
         "per_service_zero_pct": per_service.round(2),
@@ -94,13 +103,15 @@ def compute_spending_outliers(df: pd.DataFrame) -> pd.DataFrame:
         values = df[col].dropna()
         p99 = values.quantile(0.99)
         n_extreme = int((values > p99).sum())
-        rows.append({
-            "Servicio": col,
-            "p99": round(p99, 1),
-            "n_extremos": n_extreme,
-            "% extremos": round(n_extreme / len(values) * 100, 3),
-            "max_valor": round(values.max(), 1),
-        })
+        rows.append(
+            {
+                "Servicio": col,
+                "p99": round(p99, 1),
+                "n_extremos": n_extreme,
+                "% extremos": round(n_extreme / len(values) * 100, 3),
+                "max_valor": round(values.max(), 1),
+            }
+        )
     return pd.DataFrame(rows)
 
 

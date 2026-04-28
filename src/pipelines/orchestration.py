@@ -1,4 +1,5 @@
 """Orquestación de etapas del pipeline (subprocesos + MLflow parent run)."""
+
 from __future__ import annotations
 
 import os
@@ -23,6 +24,7 @@ PIPELINE_STAGES: List[Tuple[str, str]] = [
 
 _FS_STAGE_NAMES = frozenset({"02_features", "03_train"})
 
+
 def select_pipeline_scripts(
     *,
     skip_eda: bool = False,
@@ -30,12 +32,12 @@ def select_pipeline_scripts(
     predict_only: bool = False,
 ) -> List[Tuple[str, str]]:
     """Filtra etapas según flags.
-    
+
     Args:
         skip_eda: Omite la etapa de EDA.
         from_train: Inicia desde la etapa de entrenamiento.
         predict_only: Ejecuta solo la etapa de predicción.
-    
+
     Returns:
         Lista de tuplas (nombre_corto, ruta_script) filtradas.
     """
@@ -55,7 +57,7 @@ def run_subprocess_stages(
     parent_run_id: Optional[str],
 ) -> None:
     """
-    Ejecuta cada script en orden. Si parent_run_id está definido, 
+    Ejecuta cada script en orden. Si parent_run_id está definido,
     los runs MLflow hijos lo heredan.
 
     Args:
@@ -80,12 +82,13 @@ def run_subprocess_stages(
             print(f"\n❌ [ERROR] {name} fallo con codigo {result.returncode}")
             sys.exit(1)
 
+
 def run_pipeline_with_parent_run(
     stages: List[Tuple[str, str]],
     feature_set: Optional[str],
 ) -> None:
     """Un run MLflow padre envuelve todas las etapas listadas.
-    
+
     Args:
         stages: Lista de tuplas (nombre_corto, ruta_script) a ejecutar.
         feature_set: Nombre del conjunto de features a usar.

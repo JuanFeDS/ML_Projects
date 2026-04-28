@@ -4,6 +4,7 @@ Pipeline de EDA para Spaceship Titanic.
 Cada submódulo agrupa funciones compute_* y run_* de un dominio de análisis.
 Importar desde aquí mantiene compatibilidad con scripts existentes.
 """
+
 from src.pipelines.eda.basic import (
     run_basic_analysis,
     run_derived_analysis,

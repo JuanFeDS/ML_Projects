@@ -4,6 +4,7 @@ Análisis de la columna Cabin: distribución por Deck, Side y CabinNumber vs tar
 Cabin tiene cardinalidad ~6500 — se descompone en Deck/CabinNumber/Side.
 NB02: Deck (chi²=392.3, p<0.001) y Side (chi²=91.1, p<0.001).
 """
+
 from typing import Any, Dict
 
 import pandas as pd

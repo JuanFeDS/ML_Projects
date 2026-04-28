@@ -18,6 +18,7 @@ Oportunidades de imputación cuantificadas:
   I3. Age NaN resolubles por mediana del TravelGroup.
   I4. CryoSleep NaN inferibles desde gasto (R2 inversa).
 """
+
 from typing import Any, Dict
 
 import pandas as pd
@@ -40,12 +41,9 @@ def compute_rule_violations(df: pd.DataFrame) -> pd.DataFrame:
     has_spend = _has_spending(df)
     age_child = df["Age"].notna() & (df["Age"] <= 12)
 
-    deck = df["Cabin"].apply(
-        lambda x: x.split("/")[0] if pd.notna(x) else None
-    )
+    deck = df["Cabin"].apply(lambda x: x.split("/")[0] if pd.notna(x) else None)
     homeplanet = df["HomePlanet"]
 
-    n = len(df)
     rows = [
         {
             "Regla": "R1",
@@ -69,18 +67,32 @@ def compute_rule_violations(df: pd.DataFrame) -> pd.DataFrame:
             "Regla": "R4",
             "Descripción": "Deck A/B/C con HomePlanet ≠ Europa",
             "Violaciones": int(
-                (deck.isin(["A", "B", "C"]) & homeplanet.notna() & (homeplanet != "Europa")).sum()
+                (
+                    deck.isin(["A", "B", "C"])
+                    & homeplanet.notna()
+                    & (homeplanet != "Europa")
+                ).sum()
             ),
             "% del total": round(
-                (deck.isin(["A", "B", "C"]) & homeplanet.notna() & (homeplanet != "Europa")).mean() * 100, 3
+                (
+                    deck.isin(["A", "B", "C"])
+                    & homeplanet.notna()
+                    & (homeplanet != "Europa")
+                ).mean()
+                * 100,
+                3,
             ),
         },
         {
             "Regla": "R5",
             "Descripción": "Deck G con HomePlanet ≠ Earth",
-            "Violaciones": int(((deck == "G") & homeplanet.notna() & (homeplanet != "Earth")).sum()),
+            "Violaciones": int(
+                ((deck == "G") & homeplanet.notna() & (homeplanet != "Earth")).sum()
+            ),
             "% del total": round(
-                ((deck == "G") & homeplanet.notna() & (homeplanet != "Earth")).mean() * 100, 3
+                ((deck == "G") & homeplanet.notna() & (homeplanet != "Earth")).mean()
+                * 100,
+                3,
             ),
         },
     ]
@@ -99,12 +111,16 @@ def compute_imputation_opportunities(df: pd.DataFrame) -> pd.DataFrame:
 
     # HomePlanet: por grupo
     hp_null = df["HomePlanet"].isna()
-    known_hp = df.dropna(subset=["HomePlanet"]).groupby("TravelGroup")["HomePlanet"].first()
+    known_hp = (
+        df.dropna(subset=["HomePlanet"]).groupby("TravelGroup")["HomePlanet"].first()
+    )
     resolvable_hp_group = hp_null & df["TravelGroup"].isin(known_hp.index)
 
     # HomePlanet: por deck (A/B/C → Europa, G → Earth)
     deck_rule = {"A": "Europa", "B": "Europa", "C": "Europa", "G": "Earth"}
-    resolvable_hp_deck = hp_null & ~resolvable_hp_group & df["Deck"].isin(deck_rule.keys())
+    resolvable_hp_deck = (
+        hp_null & ~resolvable_hp_group & df["Deck"].isin(deck_rule.keys())
+    )
 
     # Deck/Side: por grupo
     deck_null = df["Cabin"].isna()
@@ -119,7 +135,9 @@ def compute_imputation_opportunities(df: pd.DataFrame) -> pd.DataFrame:
     # Age: por mediana del grupo
     age_null = df["Age"].isna()
     group_has_age = df.dropna(subset=["Age"]).groupby("TravelGroup")["Age"].count() > 0
-    resolvable_age = age_null & df["TravelGroup"].isin(group_has_age[group_has_age].index)
+    resolvable_age = age_null & df["TravelGroup"].isin(
+        group_has_age[group_has_age].index
+    )
 
     # CryoSleep: por gasto > 0 (R2 inversa)
     cryo_null = ~df["CryoSleep"].isin([True, "True", False, "False"])
@@ -132,7 +150,10 @@ def compute_imputation_opportunities(df: pd.DataFrame) -> pd.DataFrame:
             "NaN total": int(hp_null.sum()),
             "Resolubles": int(resolvable_hp_group.sum() + resolvable_hp_deck.sum()),
             "% resolubles": round(
-                (resolvable_hp_group.sum() + resolvable_hp_deck.sum()) / max(hp_null.sum(), 1) * 100, 1
+                (resolvable_hp_group.sum() + resolvable_hp_deck.sum())
+                / max(hp_null.sum(), 1)
+                * 100,
+                1,
             ),
             "Método": "TravelGroup + regla Deck→Planeta",
         },
@@ -140,21 +161,27 @@ def compute_imputation_opportunities(df: pd.DataFrame) -> pd.DataFrame:
             "Variable": "Cabin/Deck/Side",
             "NaN total": int(deck_null.sum()),
             "Resolubles": int(resolvable_deck.sum()),
-            "% resolubles": round(resolvable_deck.sum() / max(deck_null.sum(), 1) * 100, 1),
+            "% resolubles": round(
+                resolvable_deck.sum() / max(deck_null.sum(), 1) * 100, 1
+            ),
             "Método": "TravelGroup",
         },
         {
             "Variable": "Age",
             "NaN total": int(age_null.sum()),
             "Resolubles": int(resolvable_age.sum()),
-            "% resolubles": round(resolvable_age.sum() / max(age_null.sum(), 1) * 100, 1),
+            "% resolubles": round(
+                resolvable_age.sum() / max(age_null.sum(), 1) * 100, 1
+            ),
             "Método": "Mediana del TravelGroup",
         },
         {
             "Variable": "CryoSleep",
             "NaN total": int(cryo_null.sum()),
             "Resolubles": int(resolvable_cryo.sum()),
-            "% resolubles": round(resolvable_cryo.sum() / max(cryo_null.sum(), 1) * 100, 1),
+            "% resolubles": round(
+                resolvable_cryo.sum() / max(cryo_null.sum(), 1) * 100, 1
+            ),
             "Método": "Gasto > 0 → CryoSleep=False",
         },
     ]

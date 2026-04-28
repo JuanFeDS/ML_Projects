@@ -10,6 +10,7 @@ Cruces analizados:
   - AgeGroup × CryoSleep → patrón niños sin cryo con cero gasto (R3)
   - CryoSleep × Spending → separación clean entre clases
 """
+
 from typing import Any, Dict
 
 import numpy as np
@@ -26,7 +27,11 @@ def compute_cryo_homeplanet_pivot(df: pd.DataFrame) -> pd.DataFrame:
     """
     temp = df.dropna(subset=["HomePlanet", "CryoSleep"]).copy()
     temp["CryoSleep_str"] = temp["CryoSleep"].astype(str)
-    pivot = temp.groupby(["HomePlanet", "CryoSleep_str"])[TARGET].mean().unstack(fill_value=np.nan)
+    pivot = (
+        temp.groupby(["HomePlanet", "CryoSleep_str"])[TARGET]
+        .mean()
+        .unstack(fill_value=np.nan)
+    )
     pivot.columns.name = "CryoSleep"
     return pivot.round(4)
 
@@ -56,9 +61,11 @@ def compute_age_cryo_stats(df: pd.DataFrame) -> pd.DataFrame:
         DataFrame: CryoSleep_str × [mean_age, mean_spending, transport_rate, n].
     """
     temp = df.copy()
-    temp["CryoSleep_str"] = temp["CryoSleep"].map(
-        {True: "True", "True": "True", False: "False", "False": "False"}
-    ).fillna("Unknown")
+    temp["CryoSleep_str"] = (
+        temp["CryoSleep"]
+        .map({True: "True", "True": "True", False: "False", "False": "False"})
+        .fillna("Unknown")
+    )
     temp["TotalSpending"] = temp[SPENDING_COLS].fillna(0).sum(axis=1)
 
     agg = (

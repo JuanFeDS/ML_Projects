@@ -10,11 +10,12 @@ Hallazgos clave que motivan features de grupo (fs-013):
   - GroupAllCryo → 80.5% transported vs 42.4% sin nadie en CryoSleep
   - 94% de grupos comparten el mismo apellido → indicador de familia
 """
+
 from typing import Any, Dict
 
 import pandas as pd
 
-from src.features.constants import SPENDING_COLS, TARGET
+from src.features.constants import TARGET
 from src.pipelines.eda.statistical import compute_chi2_stats
 
 
@@ -79,9 +80,12 @@ def compute_group_cryo_dynamics(df: pd.DataFrame) -> pd.DataFrame:
         DataFrame: EstadoGrupo × [n, transported_rate].
     """
     temp = _add_group_cols(df)
-    cryo_int = temp["CryoSleep"].map(
-        {True: 1, "True": 1, False: 0, "False": 0}
-    ).fillna(0).astype(int)
+    cryo_int = (
+        temp["CryoSleep"]
+        .map({True: 1, "True": 1, False: 0, "False": 0})
+        .fillna(0)
+        .astype(int)
+    )
     temp["_cryo_int"] = cryo_int
 
     group_min = temp.groupby("TravelGroup")["_cryo_int"].transform("min")
@@ -105,7 +109,9 @@ def compute_group_cryo_dynamics(df: pd.DataFrame) -> pd.DataFrame:
         .rename(columns={"CryoSegment": "Estado Grupo"})
     )
     # Ordenar por tasa descendente
-    return result.sort_values("transported_rate", ascending=False).reset_index(drop=True)
+    return result.sort_values("transported_rate", ascending=False).reset_index(
+        drop=True
+    )
 
 
 def compute_group_homeplanet_homogeneity(df: pd.DataFrame) -> dict:
@@ -119,13 +125,19 @@ def compute_group_homeplanet_homogeneity(df: pd.DataFrame) -> dict:
     """
     temp = _add_group_cols(df)
     grouped = temp[temp["GroupSize"] > 1]
-    hp_per_group = grouped.dropna(subset=["HomePlanet"]).groupby("TravelGroup")["HomePlanet"].nunique()
+    hp_per_group = (
+        grouped.dropna(subset=["HomePlanet"])
+        .groupby("TravelGroup")["HomePlanet"]
+        .nunique()
+    )
     mixed = int((hp_per_group > 1).sum())
     total = int(hp_per_group.shape[0])
     return {
         "n_grupos_total": int(temp["TravelGroup"].nunique()),
         "n_grupos_mixtos_homeplanet": mixed,
-        "pct_homogeneous": round((total - mixed) / total * 100, 2) if total > 0 else 100.0,
+        "pct_homogeneous": (
+            round((total - mixed) / total * 100, 2) if total > 0 else 100.0
+        ),
     }
 
 
@@ -178,7 +190,5 @@ def run_group_analysis(df: pd.DataFrame) -> Dict[str, Any]:
         "cryo_dynamics": compute_group_cryo_dynamics(df),
         "homeplanet_homogeneity": compute_group_homeplanet_homogeneity(df),
         "family_stats": compute_family_surname_stats(df),
-        "groupsize_chi2": compute_chi2_stats(
-            _add_group_cols(df), "GroupSize", TARGET
-        ),
+        "groupsize_chi2": compute_chi2_stats(_add_group_cols(df), "GroupSize", TARGET),
     }
