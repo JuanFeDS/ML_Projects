@@ -1,6 +1,7 @@
 """
 Visualizaciones del EDA — re-exports para compatibilidad con imports existentes.
 """
+
 from src.reports.eda.plots.basic import (
     correlation_heatmap,
     nulls_bar,
@@ -38,16 +39,31 @@ from src.reports.eda.plots.spending import (
 
 __all__ = [
     # basic
-    "unique_values_bar", "nulls_bar", "target_pie", "numeric_stats_table",
-    "numeric_histograms", "numeric_boxplots", "correlation_heatmap", "numeric_vs_target_hist",
+    "unique_values_bar",
+    "nulls_bar",
+    "target_pie",
+    "numeric_stats_table",
+    "numeric_histograms",
+    "numeric_boxplots",
+    "correlation_heatmap",
+    "numeric_vs_target_hist",
     # categorical
-    "categorical_double_bar", "decisions_table", "groupsize_bar",
+    "categorical_double_bar",
+    "decisions_table",
+    "groupsize_bar",
     # spending
-    "total_spending_compare", "spending_per_service_bar", "zero_inflation_bar",
+    "total_spending_compare",
+    "spending_per_service_bar",
+    "zero_inflation_bar",
     # cabin
-    "deck_transport_rate_bar", "side_transport_rate_bar", "cabin_deck_homeplanet_heatmap",
+    "deck_transport_rate_bar",
+    "side_transport_rate_bar",
+    "cabin_deck_homeplanet_heatmap",
     # domain_rules
-    "violations_table", "imputation_opportunities_bar",
+    "violations_table",
+    "imputation_opportunities_bar",
     # bivariate
-    "cryo_homeplanet_heatmap", "deck_homeplanet_heatmap", "age_cryo_bar",
+    "cryo_homeplanet_heatmap",
+    "deck_homeplanet_heatmap",
+    "age_cryo_bar",
 ]

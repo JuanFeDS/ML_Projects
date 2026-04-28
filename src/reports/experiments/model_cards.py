@@ -1,6 +1,7 @@
 """
 Escritores de tarjetas de modelo y documentos de calidad de datos en docs/.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -27,22 +28,26 @@ def write_data_quality_doc(df: pd.DataFrame, target_col: str, path: str) -> None
     md.add_metric("Columnas", df.shape[1])
 
     md.add_section("Tipos de datos")
-    dtypes_df = pd.DataFrame({
-        "Columna": df.columns,
-        "Tipo": df.dtypes.astype(str).values,
-        "Valores unicos": [df[c].nunique() for c in df.columns],
-    })
+    dtypes_df = pd.DataFrame(
+        {
+            "Columna": df.columns,
+            "Tipo": df.dtypes.astype(str).values,
+            "Valores unicos": [df[c].nunique() for c in df.columns],
+        }
+    )
     md.add_table(dtypes_df, index=False)
 
     md.add_section("Valores nulos")
     null_counts = df.isnull().sum()
     null_pct = (null_counts / len(df) * 100).round(2)
     nulls_df = (
-        pd.DataFrame({
-            "Columna": null_counts.index,
-            "Nulos": null_counts.values,
-            "% Nulos": null_pct.values,
-        })
+        pd.DataFrame(
+            {
+                "Columna": null_counts.index,
+                "Nulos": null_counts.values,
+                "% Nulos": null_pct.values,
+            }
+        )
         .query("Nulos > 0")
         .reset_index(drop=True)
     )
@@ -59,11 +64,13 @@ def write_data_quality_doc(df: pd.DataFrame, target_col: str, path: str) -> None
         md.add_section(f"Balance del target ({target_col})")
         counts = df[target_col].value_counts()
         pcts = df[target_col].value_counts(normalize=True) * 100
-        balance_df = pd.DataFrame({
-            "Clase": counts.index.astype(str),
-            "Conteo": counts.values,
-            "% del total": pcts.values.round(2),
-        })
+        balance_df = pd.DataFrame(
+            {
+                "Clase": counts.index.astype(str),
+                "Conteo": counts.values,
+                "% del total": pcts.values.round(2),
+            }
+        )
         md.add_table(balance_df, index=False)
 
     md.add_section("Ultima actualizacion")
@@ -94,19 +101,28 @@ def write_model_card(metadata: dict, feature_names: List[str], path: str) -> Non
     )
 
     md.add_section("Metricas de rendimiento")
-    metrics_df = pd.DataFrame([
-        {"Metrica": "Accuracy (validacion)", "Valor": metadata.get("val_accuracy", "—")},
-        {"Metrica": "ROC-AUC (validacion)", "Valor": metadata.get("val_roc_auc", "—")},
-        {"Metrica": "Accuracy (CV 5-fold)", "Valor": metadata.get("cv_accuracy", "—")},
-    ])
+    metrics_df = pd.DataFrame(
+        [
+            {
+                "Metrica": "Accuracy (validacion)",
+                "Valor": metadata.get("val_accuracy", "—"),
+            },
+            {
+                "Metrica": "ROC-AUC (validacion)",
+                "Valor": metadata.get("val_roc_auc", "—"),
+            },
+            {
+                "Metrica": "Accuracy (CV 5-fold)",
+                "Valor": metadata.get("cv_accuracy", "—"),
+            },
+        ]
+    )
     md.add_table(metrics_df, index=False)
 
     best_params = metadata.get("best_params")
     if best_params:
         md.add_section("Hiperparametros")
-        md.add_code(
-            "\n".join(f"{k}: {v}" for k, v in best_params.items()), lang=""
-        )
+        md.add_code("\n".join(f"{k}: {v}" for k, v in best_params.items()), lang="")
 
     md.add_section("Features del modelo")
     md.add_bullet_list(feature_names)
@@ -155,7 +171,9 @@ def write_experiment_card(
     md.add_metric("Target", "Transported (True/False)")
 
     md.add_section("Estado")
-    status = "🏆 Promovido a produccion" if promoted else "❌ No supero al modelo actual"
+    status = (
+        "🏆 Promovido a produccion" if promoted else "❌ No supero al modelo actual"
+    )
     md.add_metric("Resultado", status)
     new_acc = metadata.get("val_accuracy")
     if current_best_acc is not None and isinstance(new_acc, float):
@@ -182,19 +200,28 @@ def write_experiment_card(
             md.add_metric("Descripcion", fs_description)
 
     md.add_section("Metricas de rendimiento")
-    metrics_df = pd.DataFrame([
-        {"Metrica": "Accuracy (validacion)", "Valor": metadata.get("val_accuracy", "—")},
-        {"Metrica": "ROC-AUC (validacion)", "Valor": metadata.get("val_roc_auc", "—")},
-        {"Metrica": "Accuracy (CV 5-fold)", "Valor": metadata.get("cv_accuracy", "—")},
-    ])
+    metrics_df = pd.DataFrame(
+        [
+            {
+                "Metrica": "Accuracy (validacion)",
+                "Valor": metadata.get("val_accuracy", "—"),
+            },
+            {
+                "Metrica": "ROC-AUC (validacion)",
+                "Valor": metadata.get("val_roc_auc", "—"),
+            },
+            {
+                "Metrica": "Accuracy (CV 5-fold)",
+                "Valor": metadata.get("cv_accuracy", "—"),
+            },
+        ]
+    )
     md.add_table(metrics_df, index=False)
 
     best_params = metadata.get("best_params")
     if best_params:
         md.add_section("Hiperparametros")
-        md.add_code(
-            "\n".join(f"{k}: {v}" for k, v in best_params.items()), lang=""
-        )
+        md.add_code("\n".join(f"{k}: {v}" for k, v in best_params.items()), lang="")
 
     n_samples = metadata.get("n_train_samples")
     md.add_section("Dataset")
@@ -203,7 +230,9 @@ def write_experiment_card(
         "Muestras de entrenamiento",
         f"{n_samples:,}" if isinstance(n_samples, int) else "—",
     )
-    md.add_metric("Estrategia de validacion", "StratifiedKFold (5 folds) + hold-out 20%")
+    md.add_metric(
+        "Estrategia de validacion", "StratifiedKFold (5 folds) + hold-out 20%"
+    )
 
     md.add_section("Features del modelo")
     md.add_bullet_list(feature_names)

@@ -1,4 +1,5 @@
 """Renderización HTML de tarjetas de detalle por experimento."""
+
 from __future__ import annotations
 
 import re
@@ -8,7 +9,6 @@ import pandas as pd
 
 from src.reports.builder import HTMLReport
 from src.reports.experiments.charts import plot_trials_convergence
-
 
 _CARD_CSS = """
 <style>
@@ -289,7 +289,7 @@ def render_experiment_card(
     html.add_html(
         f'<div class="exp-card">{header}'
         f'<div class="exp-card-body">{narrative}{metrics_col}</div>'
-        f'{footer}</div>'
+        f"{footer}</div>"
     )
 
     fig = plot_trials_convergence(trials_df, row["run_id"])

@@ -4,6 +4,7 @@ Generación de reportes para Feature Engineering.
 Este módulo encapsula la creación de los reportes Markdown y HTML
 que documentan las transformaciones del pipeline de características.
 """
+
 from typing import Dict, Any
 import pandas as pd
 from src.config.settings import REPORTS_DIR
@@ -13,7 +14,10 @@ from src.reports.features.plots import (
     total_spending_compare,
 )
 
-def build_feature_report(df_raw: pd.DataFrame, results: Dict[str, Any], fs_name: str, fs_description: str):
+
+def build_feature_report(
+    df_raw: pd.DataFrame, results: Dict[str, Any], fs_name: str, fs_description: str
+):
     """Construye ambos reportes (MD y HTML) para la fase de features.
 
     Args:
@@ -39,13 +43,15 @@ def build_feature_report(df_raw: pd.DataFrame, results: Dict[str, Any], fs_name:
         "El dataset resultante está listo para entrenamiento."
     )
 
-    html.add_metrics_grid([
-        (f"{df_raw.shape[0]:,}", "registros iniciales"),
-        (f"{meta['n_samples']:,}", "registros finales"),
-        (df_raw.shape[1], "variables raw"),
-        (meta["n_features"], "features resultantes"),
-        (X.isnull().sum().sum(), "nulos residuales"),
-    ])
+    html.add_metrics_grid(
+        [
+            (f"{df_raw.shape[0]:,}", "registros iniciales"),
+            (f"{meta['n_samples']:,}", "registros finales"),
+            (df_raw.shape[1], "variables raw"),
+            (meta["n_features"], "features resultantes"),
+            (X.isnull().sum().sum(), "nulos residuales"),
+        ]
+    )
 
     # ------------------------------------------------------------------
     # 2. Detalles Técnicos
@@ -63,7 +69,9 @@ def build_feature_report(df_raw: pd.DataFrame, results: Dict[str, Any], fs_name:
     html.add_section("Visualización de Transformaciones")
 
     # Total Spending Compare (Raw vs Log)
-    html.add_figure(total_spending_compare(df_raw, "Transported"), title="TotalSpending: Raw vs Log")
+    html.add_figure(
+        total_spending_compare(df_raw, "Transported"), title="TotalSpending: Raw vs Log"
+    )
 
     # Age Scaling Compare
     try:

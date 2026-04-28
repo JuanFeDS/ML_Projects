@@ -9,15 +9,18 @@ Selecciona automaticamente el explainer segun el tipo de modelo:
 Todas las funciones devuelven una cadena base64 (PNG) lista para
 incrustar con HTMLReport.add_image().
 """
+
 from __future__ import annotations
 
 import base64
 import io
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, NamedTuple, Optional, Tuple
 
 import matplotlib
+
 matplotlib.use("Agg")  # sin GUI, compatible con entornos sin display
+# pylint: disable=wrong-import-position
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -41,18 +44,21 @@ _TREE_TYPES = (
 
 try:
     from xgboost import XGBClassifier
+
     _TREE_TYPES = _TREE_TYPES + (XGBClassifier,)
 except ImportError:
     pass
 
 try:
     from lightgbm import LGBMClassifier
+
     _TREE_TYPES = _TREE_TYPES + (LGBMClassifier,)
 except ImportError:
     pass
 
 try:
     from catboost import CatBoostClassifier
+
     _TREE_TYPES = _TREE_TYPES + (CatBoostClassifier,)
 except ImportError:
     pass
@@ -60,9 +66,18 @@ except ImportError:
 _KERNEL_SAMPLE = 150  # filas para KernelExplainer (lento)
 
 
+class ValPredictions(NamedTuple):
+    """Datos de validacion para calculos SHAP."""
+
+    X: pd.DataFrame
+    y_true: pd.Series
+    y_proba: np.ndarray
+
+
 # ---------------------------------------------------------------------------
 # Helpers internos
 # ---------------------------------------------------------------------------
+
 
 def _fig_to_b64(fig: plt.Figure) -> str:
     """Convierte una figura matplotlib a cadena base64 PNG."""
@@ -77,7 +92,7 @@ def _fig_to_b64(fig: plt.Figure) -> str:
 def _build_explainer(
     model: Any,
     x_train: pd.DataFrame,
-) -> Tuple[Any, np.ndarray]:
+) -> Tuple[Any, np.ndarray, pd.DataFrame]:
     """Crea el explainer y calcula los SHAP values sobre x_train.
 
     Args:
@@ -85,16 +100,13 @@ def _build_explainer(
         x_train: Features de entrenamiento (DataFrame).
 
     Returns:
-        Tupla (explainer, shap_values) donde shap_values tiene shape
-        (n_samples, n_features) para la clase positiva.
+        Tupla (explainer, shap_values, x_aligned) para la clase positiva.
     """
-    # Unwrap pipelines/wrappers que exponen el estimador base
     base = getattr(model, "final_estimator_", None) or model
 
     if isinstance(base, _TREE_TYPES):
         explainer = shap.TreeExplainer(base)
         sv = explainer.shap_values(x_train)
-        # Para clasificadores binarios algunos devuelven lista [neg, pos]
         shap_values = sv[1] if isinstance(sv, list) else sv
 
     elif isinstance(base, LogisticRegression):
@@ -104,7 +116,6 @@ def _build_explainer(
         shap_values = sv[1] if isinstance(sv, list) else sv
 
     else:
-        # Fallback: KernelExplainer sobre muestra reducida
         logger.warning(
             "Modelo %s no soportado por Tree/LinearExplainer. "
             "Usando KernelExplainer sobre %d muestras (lento).",
@@ -115,7 +126,7 @@ def _build_explainer(
         explainer = shap.KernelExplainer(base.predict_proba, sample)
         sv = explainer.shap_values(sample)
         shap_values = sv[1] if isinstance(sv, list) else sv
-        x_train = sample  # alinear con los valores calculados
+        x_train = sample
 
     return explainer, shap_values, x_train
 
@@ -123,6 +134,7 @@ def _build_explainer(
 # ---------------------------------------------------------------------------
 # Plots publicos
 # ---------------------------------------------------------------------------
+
 
 def shap_summary_bar(
     model: Any,
@@ -151,7 +163,7 @@ def shap_summary_bar(
             max_display=top_n,
             show=False,
         )
-        fig = plt.gcf()
+        fig = plt.gcf()  # pylint: disable=unreachable
         fig.set_size_inches(9, max(4, top_n * 0.35))
         plt.title("SHAP — Importancia global (media |SHAP|)", fontsize=12)
         return _fig_to_b64(fig)
@@ -194,7 +206,7 @@ def shap_beeswarm(
             feature_names=feature_names,
         )
         shap.plots.beeswarm(explanation, max_display=top_n, show=False)
-        fig = plt.gcf()
+        fig = plt.gcf()  # pylint: disable=unreachable
         fig.set_size_inches(9, max(4, top_n * 0.35))
         plt.title("SHAP — Distribucion del impacto por feature", fontsize=12)
         return _fig_to_b64(fig)
@@ -226,9 +238,7 @@ def _build_waterfall_explanation(
 
 def shap_waterfall_comparison(
     model: Any,
-    x_val: pd.DataFrame,
-    y_val: pd.Series,
-    y_proba: np.ndarray,
+    val_preds: ValPredictions,
     feature_names: List[str],
     max_display: int = 15,
 ) -> Optional[str]:
@@ -239,9 +249,7 @@ def shap_waterfall_comparison(
 
     Args:
         model: Estimador sklearn entrenado.
-        x_val: Features del conjunto de validacion.
-        y_val: Labels reales de validacion.
-        y_proba: Probabilidades predichas de la clase positiva.
+        val_preds: ValPredictions con X, y_true e y_proba de validacion.
         feature_names: Nombres de las features.
         max_display: Numero maximo de features por waterfall.
 
@@ -249,25 +257,24 @@ def shap_waterfall_comparison(
         Imagen PNG en base64 con dos subplots, o None si falla.
     """
     try:
-        errors = np.abs(y_proba - y_val.values.astype(float))
+        errors = np.abs(val_preds.y_proba - val_preds.y_true.values.astype(float))
         worst_idx = int(np.argmax(errors))
 
-        # Mejor: minimo error entre predicciones correctas
-        y_pred_binary = (y_proba >= 0.5).astype(int)
-        correct_mask = y_pred_binary == y_val.values.astype(int)
+        y_pred_binary = (val_preds.y_proba >= 0.5).astype(int)
+        correct_mask = y_pred_binary == val_preds.y_true.values.astype(int)
         if correct_mask.any():
             errors_correct = np.where(correct_mask, errors, np.inf)
             best_idx = int(np.argmin(errors_correct))
         else:
             best_idx = int(np.argmin(errors))
 
-        explainer, _, _ = _build_explainer(model, x_val)
+        explainer, _, _ = _build_explainer(model, val_preds.X)
 
         exp_worst = _build_waterfall_explanation(
-            explainer, x_val.iloc[[worst_idx]], feature_names
+            explainer, val_preds.X.iloc[[worst_idx]], feature_names
         )
         exp_best = _build_waterfall_explanation(
-            explainer, x_val.iloc[[best_idx]], feature_names
+            explainer, val_preds.X.iloc[[best_idx]], feature_names
         )
 
         fig, axes = plt.subplots(2, 1, figsize=(10, max(10, max_display * 0.8)))
@@ -276,7 +283,7 @@ def shap_waterfall_comparison(
         shap.plots.waterfall(exp_worst, max_display=max_display, show=False)
         axes[0].set_title(
             f"Peor prediccion — "
-            f"label={int(y_val.iloc[worst_idx])}  proba={y_proba[worst_idx]:.3f}",
+            f"label={int(val_preds.y_true.iloc[worst_idx])}  proba={val_preds.y_proba[worst_idx]:.3f}",
             fontsize=10,
         )
 
@@ -284,7 +291,7 @@ def shap_waterfall_comparison(
         shap.plots.waterfall(exp_best, max_display=max_display, show=False)
         axes[1].set_title(
             f"Mejor prediccion — "
-            f"label={int(y_val.iloc[best_idx])}  proba={y_proba[best_idx]:.3f}",
+            f"label={int(val_preds.y_true.iloc[best_idx])}  proba={val_preds.y_proba[best_idx]:.3f}",
             fontsize=10,
         )
 
@@ -299,9 +306,7 @@ def shap_waterfall_comparison(
 def compute_shap_plots(
     model: Any,
     x_train: pd.DataFrame,
-    x_val: pd.DataFrame,
-    y_val: pd.Series,
-    y_proba: np.ndarray,
+    val_preds: ValPredictions,
     feature_names: List[str],
 ) -> Dict[str, Optional[str]]:
     """Calcula todos los plots SHAP y los devuelve como base64.
@@ -311,9 +316,7 @@ def compute_shap_plots(
     Args:
         model: Estimador sklearn entrenado.
         x_train: Features de entrenamiento (para calcular SHAP values globales).
-        x_val: Features de validacion (para los waterfalls).
-        y_val: Labels reales de validacion.
-        y_proba: Probabilidades predichas en validacion.
+        val_preds: ValPredictions con X, y_true e y_proba de validacion.
         feature_names: Nombres de las features.
 
     Returns:
@@ -321,9 +324,9 @@ def compute_shap_plots(
         Cada valor es una cadena base64 PNG o None si fallo.
     """
     print("  [SHAP] Calculando summary bar...")
-    bar = shap_summary_bar(model, x_train, feature_names)
+    shap_bar = shap_summary_bar(model, x_train, feature_names)
     print("  [SHAP] Calculando beeswarm...")
     beeswarm = shap_beeswarm(model, x_train, feature_names)
     print("  [SHAP] Calculando waterfall (peor vs mejor prediccion)...")
-    waterfall = shap_waterfall_comparison(model, x_val, y_val, y_proba, feature_names)
-    return {"summary_bar": bar, "beeswarm": beeswarm, "waterfall_comparison": waterfall}
+    waterfall = shap_waterfall_comparison(model, val_preds, feature_names)
+    return {"summary_bar": shap_bar, "beeswarm": beeswarm, "waterfall_comparison": waterfall}

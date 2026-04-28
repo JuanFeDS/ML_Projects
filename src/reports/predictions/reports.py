@@ -4,6 +4,7 @@ Generación del reporte de predicciones para el pipeline Spaceship Titanic.
 Función para construir reports/04_predictions.md a partir de los resultados
 del script de predicción.
 """
+
 import pandas as pd
 
 from src.config.settings import MODEL_PATH, REPORTS_DIR
@@ -48,23 +49,25 @@ def build_prediction_md(
     md.add_section("Predicciones Generadas")
     md.add_metric("Registros predichos", n_total)
 
-    dist_df = pd.DataFrame([
-        {
-            "Transported": "True  (transportado)",
-            "Conteo": n_true,
-            "Porcentaje": f"{pct_true:.1f}%",
-        },
-        {
-            "Transported": "False (no transportado)",
-            "Conteo": n_false,
-            "Porcentaje": f"{pct_false:.1f}%",
-        },
-        {
-            "Transported": "Total",
-            "Conteo": n_total,
-            "Porcentaje": "100.0%",
-        },
-    ])
+    dist_df = pd.DataFrame(
+        [
+            {
+                "Transported": "True  (transportado)",
+                "Conteo": n_true,
+                "Porcentaje": f"{pct_true:.1f}%",
+            },
+            {
+                "Transported": "False (no transportado)",
+                "Conteo": n_false,
+                "Porcentaje": f"{pct_false:.1f}%",
+            },
+            {
+                "Transported": "Total",
+                "Conteo": n_total,
+                "Porcentaje": "100.0%",
+            },
+        ]
+    )
     md.add_table(dist_df, index=False)
 
     md.add_section("Archivo Generado")

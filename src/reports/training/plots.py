@@ -4,6 +4,7 @@ Funciones de visualizacion para el reporte de entrenamiento.
 Cada funcion recibe datos ya calculados y devuelve una figura Plotly.
 El script 03_train.py las orquesta junto con HTMLReport.
 """
+
 from typing import List, Optional
 
 import numpy as np
