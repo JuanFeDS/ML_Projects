@@ -3,9 +3,10 @@
 Coordina la extracción de datos (tracking_loader), las visualizaciones (charts)
 y el renderizado de tarjetas (cards_renderer) para producir el HTML final.
 """
+
 from __future__ import annotations
 
-from src.models.tracking_loader import load_experiment_data
+from src.models.tracking import load_experiment_data
 from src.reports.builder import HTMLReport
 from src.reports.experiments.cards_renderer import _CARD_CSS, render_experiment_card
 from src.reports.experiments.charts import (
@@ -55,14 +56,16 @@ def build_tracking_report(
         f"Mejor resultado: <b>{summary['best_val_accuracy']:.4f} val_accuracy</b> "
         f"con <code>{summary['best_feature_set']}</code>."
     )
-    html.add_metrics_grid([
-        (summary["total_experiments"], "Feature Sets"),
-        (summary["total_runs"], "Runs totales"),
-        (summary["total_trials"], "Trials Optuna"),
-        (f"{summary['best_val_accuracy']:.4f}", "Mejor Val Acc"),
-        (summary["best_feature_set"].split("_")[0], "Mejor FS"),
-        (summary["total_predictions"], "Submissions"),
-    ])
+    html.add_metrics_grid(
+        [
+            (summary["total_experiments"], "Feature Sets"),
+            (summary["total_runs"], "Runs totales"),
+            (summary["total_trials"], "Trials Optuna"),
+            (f"{summary['best_val_accuracy']:.4f}", "Mejor Val Acc"),
+            (summary["best_feature_set"].split("_")[0], "Mejor FS"),
+            (summary["total_predictions"], "Submissions"),
+        ]
+    )
 
     html.add_section("Leaderboard de Experimentos")
     html.add_text(
@@ -88,7 +91,10 @@ def build_tracking_report(
         "Evolucion del val_accuracy y cv_accuracy a lo largo de los experimentos, "
         "ordenados por numero de feature set. La linea discontinua marca el mejor resultado alcanzado."
     )
-    html.add_figure(plot_accuracy_progression(df), title="Val Accuracy y CV Accuracy por Feature Set")
+    html.add_figure(
+        plot_accuracy_progression(df),
+        title="Val Accuracy y CV Accuracy por Feature Set",
+    )
 
     html.add_section("Diagnostico de Sobreajuste")
     html.add_text(
@@ -114,7 +120,9 @@ def build_tracking_report(
         "El dataset real tiene ~50% de balance — desviaciones grandes pueden indicar "
         "calibracion incorrecta del modelo."
     )
-    html.add_figure(plot_submission_rates(pred_df), title="% Transported predicho por experimento")
+    html.add_figure(
+        plot_submission_rates(pred_df), title="% Transported predicho por experimento"
+    )
 
     html.add_section("Detalle por Experimento")
     html.add_text(
@@ -124,16 +132,23 @@ def build_tracking_report(
     html.add_html(_CARD_CSS)
 
     baseline_row = df[df["feature_set"] == "fs-001_baseline"]
-    baseline_val = float(baseline_row["val_accuracy"].iloc[0]) if not baseline_row.empty else 0.8285
+    baseline_val = (
+        float(baseline_row["val_accuracy"].iloc[0])
+        if not baseline_row.empty
+        else 0.8285
+    )
 
     for _, row in df.sort_values("fs_num").iterrows():
         fs = row["feature_set"]
-        desc = EXPERIMENT_DESCRIPTIONS.get(fs, {
-            "what": "Descripcion pendiente.",
-            "hypothesis": "Pendiente.",
-            "result": "Pendiente.",
-            "tags": [],
-        })
+        desc = EXPERIMENT_DESCRIPTIONS.get(
+            fs,
+            {
+                "what": "Descripcion pendiente.",
+                "hypothesis": "Pendiente.",
+                "result": "Pendiente.",
+                "tags": [],
+            },
+        )
         render_experiment_card(html, row, trials_df, baseline_val, desc)
 
     html.save(output_path)
