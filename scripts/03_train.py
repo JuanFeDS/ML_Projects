@@ -6,10 +6,11 @@ Ejecutar desde la raiz del proyecto:
     python scripts/03_train.py --feature-set fs-001_baseline --model LogisticRegression --no-tune --no-stack --no-moe
     python scripts/03_train.py --feature-set fs-002_cryo_interactions
 """
+
 import argparse
 
 from src.features.feature_sets import DEFAULT_FEATURE_SET, FEATURE_SETS
-from src.models.catalogue import MODELS
+from src.models.training import MODELS
 from src.pipelines.training_pipeline import TrainingPipeline
 from src.reports.factory import ReportFactory
 
