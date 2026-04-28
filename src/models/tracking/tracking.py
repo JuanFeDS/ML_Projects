@@ -1,9 +1,10 @@
 """
 Script para el seguimiento de experimentos con MLflow.
 
-Este modulo permite centralizar la configuracion de MLflow y provee 
+Este modulo permite centralizar la configuracion de MLflow y provee
 funciones helper para loguear parametros, metricas y artefactos.
 """
+
 import os
 from typing import Any, Dict, Optional
 from contextlib import contextmanager
@@ -12,17 +13,15 @@ import mlflow
 
 from src.config.settings import MLFLOW_TRACKING_URI, MLFLOW_EXPERIMENT_NAME
 
+
 def setup_mlflow():
     """Configura el servidor de tracking de MLflow y el experimento."""
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
     mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
 
+
 @contextmanager
-def mlrun(
-    run_name: str,
-    nested: bool = False,
-    tags: Optional[Dict[str, Any]] = None
-):
+def mlrun(run_name: str, nested: bool = False, tags: Optional[Dict[str, Any]] = None):
     """Context manager para crear un run de MLflow con soporte jerarquico.
 
     1. Si hay un run activo en el hilo actual, crea un run anidado (nested=True).
@@ -57,23 +56,20 @@ def mlrun(
                 mlflow.set_tags(tags)
             yield run
 
-def log_metrics_dict(
-    metrics: Dict[str, float], 
-    step: Optional[int] = None
-):
+
+def log_metrics_dict(metrics: Dict[str, float], step: Optional[int] = None):
     """Loguea un diccionario de metricas
-    
+
     Args:
         metrics: Diccionario de metricas.
         step: Paso opcional para series temporales.
     """
     mlflow.log_metrics(metrics, step=step)
 
-def log_params_dict(
-    params: Dict[str, Any]
-):
+
+def log_params_dict(params: Dict[str, Any]):
     """Loguea un diccionario de parametros.
-    
+
     Args:
         params: Diccionario de parametros.
     """
