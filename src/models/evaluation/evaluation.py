@@ -1,4 +1,5 @@
 """Evaluacion de modelos: CV, OOF, validacion y optimizacion de umbral."""
+
 from typing import Any, Dict, Tuple
 
 import numpy as np
@@ -35,7 +36,11 @@ def evaluate_models(
     results = {}
     setup_mlflow()
     for name, model in tqdm(models.items(), desc="CV modelos", unit="modelo"):
-        with mlrun(run_name=f"Comparison: {name}", nested=False, tags={"type": "model_selection"}):
+        with mlrun(
+            run_name=f"Comparison: {name}",
+            nested=False,
+            tags={"type": "model_selection"},
+        ):
             cv_acc = cross_val_score(
                 model, x_train, y_train, cv=cv, scoring="accuracy", n_jobs=-1
             )
