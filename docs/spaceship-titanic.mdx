@@ -1,0 +1,152 @@
+---
+title: "Spaceship Titanic — Kaggle ML Pipeline"
+description: "Pipeline ML completo para predecir pasajeros transportados a otra dimensión, con múltiples modelos, ensembles avanzados y experiment tracking con MLflow."
+date: "2023-01-31"
+domain: "machine-learning"
+level: 3
+level_name: "Production Pipeline"
+flags: ["ai-ml"]
+stack: ["Python", "LightGBM", "XGBoost", "CatBoost", "TabNet", "TabPFN", "Optuna", "MLflow", "scikit-learn", "Pandas", "NumPy"]
+complexity_breakdown:
+  architecture: 4
+  data: 3
+  infrastructure: 2
+  ai: 4
+summary: "Pipeline ML de producción con arquitectura de 3 capas, 6 modelos, stacking, Mixture of Experts, GroupKFold honesto y experiment tracking con MLflow."
+image: "/images/projects/spaceship-titanic/banner.png"
+github: "https://github.com/JuanFeDS/ML_Projects"
+demo: ""
+draft: false
+---
+
+![Spaceship Titanic — A Transdimensional Rescue](/images/projects/spaceship-titanic/banner.png)
+
+## El punto de partida: un Titanic diferente
+
+El año es 2912. La humanidad ya viaja entre estrellas. El Spaceship Titanic, un crucero interestelar de lujo en su viaje inaugural desde el Sistema Solar hacia Trappist-1, choca con una anomalía espacio-temporal oculta en una nube de polvo. El resultado: casi la mitad de sus 13.000 pasajeros es transportada a una dimensión alternativa.
+
+Este es el escenario que propone Kaggle en su competencia [Spaceship Titanic](https://www.kaggle.com/competitions/spaceship-titanic). El objetivo técnico es claro: construir un clasificador que, a partir de los registros de los pasajeros recuperados de los servidores dañados, prediga quiénes fueron transportados y quiénes no.
+
+Pero el objetivo real que me planteé era distinto. No me interesaba únicamente competir — me interesaba construir un ***pipeline ML reproducible, bien estructurado y extensible***, que pudiera servirme como referencia de cómo abordar un problema de clasificación tabular de principio a fin. La competencia fue el pretexto. La arquitectura fue el proyecto.
+
+---
+
+## El dataset: una historia escondida en las cabinas
+
+El dataset tiene poco más de 8.700 filas en train y alrededor de 4.300 en test. A primera vista parece simple, pero esconde una estructura interna fascinante.
+
+![Vista general del dataset y distribución de variables clave](/images/projects/spaceship-titanic/dataset-overview.png)
+
+Cada pasajero tiene registros de variables demográficas básicas (edad, planeta de origen, destino), variables de comportamiento a bordo (cuánto gastó en el Spa, el Room Service, la cabina VR, el restaurante y el Duty Free) y una variable de cabina con formato `Deck/Num/Side` (por ejemplo, `B/412/P`).
+
+Esa variable de cabina resultó ser una mina de oro. Al descomponerla, aparece una señal muy fuerte: los pasajeros del lado `S` (*Starboard*) tienen una tasa de transporte significativamente mayor que los del lado `P` (*Port*). El deck también importa — los decks superiores concentran ciertas poblaciones con comportamientos distintos.
+
+Otro hallazgo crítico surgió del campo `PassengerId`, que tiene el formato `GGGG_PP`, donde `GGGG` es el ID del grupo familiar. Los pasajeros que viajan en grupo comparten patrones de comportamiento y de transporte. Esto rompió la asunción de independencia entre observaciones y abrió la puerta a un tipo de feature engineering que va mucho más allá de las variables individuales.
+
+El EDA también reveló algo contraintuitivo sobre el gasto: los pasajeros en `CryoSleep` (suspensión animada durante el viaje) tienen gasto cero en todos los servicios — algo lógico, pero que si no se trata correctamente, introduce correlaciones artificiales que confunden a los modelos.
+
+---
+
+## El problema que quería resolver (y no era la competencia)
+
+Hay una forma estándar de abordar un Kaggle: abrir un notebook, explorar los datos, entrenar unos modelos, ajustar a mano y subir submissions hasta que el score sube. Es rápido, funciona, y casi todos los notebooks de Kaggle siguen este patrón.
+
+El problema es que ese notebook es un desastre semanas después. El código de exploración está mezclado con el de producción. Los experimentos fallidos conviven con los exitosos sin ninguna trazabilidad. Si quieres probar un nuevo conjunto de features, tienes que reescribir la mitad del notebook. Si un colega quiere reproducir los resultados, su única opción es ejecutar todo de arriba abajo y esperar que nada haya cambiado.
+
+Quería construir algo diferente: un sistema donde cada parte tenga una responsabilidad clara, donde los experimentos queden registrados automáticamente, y donde agregar un nuevo modelo o una nueva feature no signifique tocar código que no debería tocarse.
+
+---
+
+## La arquitectura: tres capas, una sola responsabilidad
+
+La solución que diseñé separa el sistema en tres capas bien diferenciadas.
+
+![Diagrama de la arquitectura de 3 capas del pipeline](/images/projects/spaceship-titanic/architecture-diagram.png)
+
+**Capa 1 — Entry point (`run.py`):** Un único orquestador que controla el flujo completo. Desde aquí se puede ejecutar el pipeline entero o saltar directamente a cualquier etapa. No contiene lógica de negocio: solo coordina.
+
+**Capa 2 — Scripts (`scripts/`):** 14 scripts secuenciales numerados del `00` al `13`. Cada uno es un orquestador delgado que parsea argumentos y llama a la lógica del `src/`. Son la interfaz humana del pipeline — si quieres correr solo el EDA, ejecutas `01_eda.py`. Si quieres entrenar solo con TabPFN, ejecutas `10_tabpfn_train.py`.
+
+**Capa 3 — Lógica reutilizable (`src/`):** Aquí vive todo el código real, organizado en módulos independientes: `config/` para la configuración y logging, `features/` para el feature engineering, `models/` para el entrenamiento y predicción, `pipelines/` para la orquestación de cada etapa, y `reports/` para la generación automática de documentación.
+
+Esta separación tiene una ventaja práctica enorme: puedo cambiar la implementación de cualquier módulo sin tocar los scripts ni el entry point. Y puedo agregar un nuevo modelo sin modificar nada más que el catálogo de modelos en `src/models/catalogue.py`.
+
+---
+
+## Feature Engineering: tres niveles de derivación
+
+El feature engineering fue la parte más intensa y la que más impacto tuvo en el score final. Lo organicé en tres niveles de derivación, de menor a mayor complejidad.
+
+![Mapa de los tres niveles de feature engineering](/images/projects/spaceship-titanic/feature-engineering-layers.png)
+
+**Nivel 1 — Features demográficas:** Transformaciones sobre las variables individuales del pasajero. Aquí se descompone la cabina en `deck`, `cabin_num` y `side`, se extrae el ID de grupo del `PassengerId`, se crea un indicador de si el pasajero viaja solo, y se binarizan variables como `CryoSleep` y `VIP`.
+
+**Nivel 2 — Features de grupo:** Aquí empieza lo interesante. Usando el ID de grupo, se calculan agregaciones sobre todos los miembros: tamaño del grupo, gasto total del grupo, proporción de pasajeros en CryoSleep dentro del grupo, destino mayoritario, varianza de edades. La hipótesis es que el comportamiento del grupo predice mejor el transporte individual que las variables propias del pasajero.
+
+**Nivel 3 — Features de interacción:** Combinaciones entre variables que capturan relaciones no lineales: gasto total por persona (`total_spend / group_size`), interacciones entre deck y side, ratio de gasto en servicios de lujo vs básicos, y flags binarios derivados de umbrales estadísticos encontrados en el EDA.
+
+Todo esto se gestiona a través de un catálogo de feature sets (`FEATURE_SETS`) donde cada entrada define qué transformaciones aplicar, qué columnas incluir y si requiere encoding adicional. Esto permite cambiar el conjunto de features con un solo argumento en el script de entrenamiento, sin tocar lógica de transformación.
+
+---
+
+## El zoo de modelos y la apuesta por la diversidad
+
+La razón de usar seis modelos distintos no es por acumular herramientas — es porque cada arquitectura captura patrones diferentes en los datos. Construir un ensemble útil requiere modelos que se equivoquen en casos distintos, no en los mismos.
+
+![Comparación de métricas de los 6 modelos base antes del ensemble](/images/projects/spaceship-titanic/model-comparison.png)
+
+**LightGBM y XGBoost** son los caballos de batalla del tabular ML. Rápidos, robustos, bien comprendidos. LightGBM crece por hojas (leaf-wise), lo que lo hace más agresivo y propenso al overfitting sin buena regularización. XGBoost crece por nivel (level-wise), más conservador. Ambos responden bien a Optuna para tuning.
+
+**CatBoost** tiene una ventaja específica en este dataset: maneja variables categóricas nativamente sin necesidad de encoding explícito. Su implementación de ordered boosting también reduce el data leakage durante el entrenamiento, lo que en datasets pequeños hace diferencia.
+
+**TabNet** es una arquitectura de deep learning específica para datos tabulares que usa atención secuencial para seleccionar features en cada paso. Es más lento y más sensible a la inicialización, pero aporta diversidad real al ensemble porque su proceso de aprendizaje es fundamentalmente distinto al de los métodos de boosting.
+
+**TabPFN** es el modelo más exótico del grupo. Es un transformador preentrenado sobre millones de datasets sintéticos que hace inferencia directamente, sin entrenamiento en el dataset objetivo. Se comporta como un prior bayesiano sobre distribuciones de clasificación tabular. Sorprendentemente competitivo en datasets pequeños.
+
+Para todos los modelos basados en boosting, el tuning de hiperparámetros se hizo con **Optuna** bajo cross-validation estratificada. Un modelo solo se promueve al ensemble si supera el umbral de performance definido — esto evita contaminar el ensemble con modelos mal ajustados.
+
+### El problema oculto: grupos que rompen el CV estándar
+
+La estructura de grupos familiares plantea un problema silencioso en la validación cruzada. Si un grupo de cuatro pasajeros queda dividido entre el fold de entrenamiento y el de validación, el modelo aprende información de esos pasajeros antes de evaluarse en sus familiares — una forma de data leakage difícil de detectar pero que infla artificialmente las métricas.
+
+La solución fue implementar **GroupKFold**: una variante de cross-validation que garantiza que todos los pasajeros de un mismo grupo familiar caigan siempre en el mismo fold. El resultado es una estimación más honesta del performance real, al costo de un CV score ligeramente más bajo. Ese descenso no es ruido — es la señal real del modelo sin la ayuda involuntaria de los grupos.
+
+---
+
+## Ensembles: cuando la combinación supera a las partes
+
+Una vez que los modelos individuales están entrenados y evaluados, el siguiente paso es combinarlos. Implementé tres estrategias de ensemble de complejidad creciente.
+
+![Diagrama de las tres estrategias de ensemble: básico, stacking y Mixture of Experts](/images/projects/spaceship-titanic/ensemble-diagram.png)
+
+**Ensemble básico:** Promedio simple o ponderado de las probabilidades predichas por cada modelo. Rápido, interpretable, y sorprendentemente efectivo como baseline de ensemble. Los pesos se optimizan por grid search sobre el validation set.
+
+**Stacking:** En lugar de promediar predicciones, se entrena un meta-modelo que aprende cómo combinar las predicciones de los modelos base. Los features de entrada al meta-modelo son las probabilidades out-of-fold de cada modelo base, obtenidas con cross-validation para evitar data leakage. Como meta-modelo usé una regresión logística con regularización L2.
+
+**Mixture of Experts (MoE):** La estrategia más sofisticada. En lugar de combinar todos los modelos de forma global, el MoE asigna dinámicamente el peso de cada modelo según las características del pasajero. La idea subyacente es que distintos modelos pueden ser mejores para distintos subgrupos: un modelo puede ser superior para pasajeros en CryoSleep, otro para pasajeros con gasto alto en servicios de lujo. El MoE aprende esta asignación automáticamente.
+
+**Expertos segmentados:** Llevando esta idea un paso más lejos, también exploré entrenar modelos completamente separados por subpoblación. El caso más claro es `CryoSleep`: los pasajeros en suspensión animada tienen gasto cero en todos los servicios por definición, lo que hace que las features de gasto no aporten señal útil para ellos. Entrenar un CatBoost exclusivamente sobre pasajeros en CryoSleep (~4.000 filas) y otro sobre el resto (~4.700) permitió que cada modelo se especializara en las variables realmente predictivas para su subgrupo, sin que el ruido de las features irrelevantes interfiriera.
+
+---
+
+## Experiment tracking: la memoria del proceso
+
+Sin un sistema de tracking, los experimentos de ML son efímeros. Cambias un hiperparámetro, el score sube, pero tres semanas después no recuerdas qué cambiaste ni con qué datos lo validaste.
+
+![Vista de la interfaz de MLflow con los experimentos del pipeline](/images/projects/spaceship-titanic/mlflow-ui.png)
+
+**MLflow** resuelve esto. Cada ejecución del pipeline registra automáticamente: los parámetros del modelo y del feature set, las métricas de evaluación (accuracy, AUC, F1), los artefactos (el modelo serializado, la importancia de features, los plots de calibración) y los metadatos del run (timestamp, git commit, versión del dataset).
+
+Además de la trazabilidad, MLflow permite comparar visualmente runs distintos y filtrar por métricas para identificar rápidamente qué combinación de modelo + features + hiperparámetros produjo el mejor resultado. El flujo de promoción es claro: un modelo solo entra al ensemble si supera el umbral de validation score registrado en el registro del modelo.
+
+---
+
+## Resultados y lo que me dejó el proyecto
+
+El pipeline llegó a una accuracy de validación en torno al **80–81%** con el ensemble final, competitivo dentro del top 20% del leaderboard para la época en que participé.
+
+Pero el número en sí importa menos que lo que construí. Al terminar el proyecto tenía algo que no suele salir de un Kaggle: un sistema que podía reabrir seis meses después y entender completamente en diez minutos. Un pipeline donde agregar un nuevo modelo era cuestión de registrarlo en el catálogo y ejecutar el script correspondiente. Un historial completo de qué se probó, con qué resultado, y en qué condiciones.
+
+El aprendizaje más concreto fue sobre los ***grupos***. La señal más fuerte del dataset no estaba en las variables individuales de cada pasajero, sino en los patrones que emergen cuando se trata al grupo familiar como unidad de análisis. Eso no es algo que un modelo descubra solo — requiere que el científico de datos lo identifique y lo codifique explícitamente en los features.
+
+Y el aprendizaje más duradero fue sobre la arquitectura: ***separar exploración de producción no es solo buena práctica, es lo que hace que un proyecto ML sea mantenible***. Los notebooks son un excelente lugar para descubrir — pero no para quedarse.
