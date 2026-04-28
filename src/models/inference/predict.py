@@ -4,6 +4,7 @@ Utilidades de prediccion para Spaceship Titanic.
 Aplica el pipeline de preprocesamiento sobre datos de test
 y genera predicciones con el modelo entrenado.
 """
+
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -56,9 +57,7 @@ def preprocess_test(
         df = pd.get_dummies(df, columns=fs.categorical_cols, drop_first=False)
 
     # Drop de columnas
-    cols_to_drop = fs.features_to_drop + [
-        c for c in _ENCODED_COLS if c in df.columns
-    ]
+    cols_to_drop = fs.features_to_drop + [c for c in _ENCODED_COLS if c in df.columns]
     if fs.target_encode_cols:
         cols_to_drop = cols_to_drop + list(fs.target_encode_cols)
     cols_existing = [c for c in cols_to_drop if c in df.columns]
@@ -100,6 +99,4 @@ def generate_submission(
     else:
         y_proba = model.predict_proba(x_test)[:, 1]
         predictions = (y_proba >= threshold).astype(bool)
-    return pd.DataFrame(
-        {"PassengerId": test_ids.values, "Transported": predictions}
-    )
+    return pd.DataFrame({"PassengerId": test_ids.values, "Transported": predictions})
