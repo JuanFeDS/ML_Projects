@@ -1,4 +1,5 @@
 """Features derivadas de interacciones de gasto, CryoSleep y clusters."""
+
 import numpy as np
 import pandas as pd
 
@@ -7,18 +8,18 @@ from src.features.engineering.encoders import _cryo_to_int
 # p99 calculados sobre el training set (8693 registros).
 # Fuente: EDA run 2026-04-12. Aplicados en test sin data leakage.
 _P99_THRESHOLDS: dict = {
-    "RoomService":  3096.2,
-    "FoodCourt":    8033.3,
+    "RoomService": 3096.2,
+    "FoodCourt": 8033.3,
     "ShoppingMall": 2333.4,
-    "Spa":          5390.1,
-    "VRDeck":       5646.7,
+    "Spa": 5390.1,
+    "VRDeck": 5646.7,
 }
 
 # Medianas de Age por HomePlanet (training set). Fuente: EDA run 2026-04-12.
 _PLANET_AGE_MEDIAN: dict = {
-    "Earth":   23.0,
-    "Europa":  33.0,
-    "Mars":    28.0,
+    "Earth": 23.0,
+    "Europa": 33.0,
+    "Mars": 28.0,
 }
 _GLOBAL_AGE_MEDIAN: float = 27.0  # fallback para HomePlanet desconocido
 
@@ -42,8 +43,8 @@ def create_solo_interaction_features(df: pd.DataFrame) -> pd.DataFrame:
     df_copy = df.copy()
     df_copy["IsAlone"] = (df_copy["GroupSize"] == 1).astype(int)
     df_copy["IsChild"] = (df_copy["Age"] < 13).astype(int)
-    df_copy["SpendingIntensity"] = (
-        df_copy["TotalSpending"] / (df_copy["SpendingCategories"] + 1)
+    df_copy["SpendingIntensity"] = df_copy["TotalSpending"] / (
+        df_copy["SpendingCategories"] + 1
     )
     return df_copy
 
@@ -73,22 +74,36 @@ def create_cryo_spending_interaction_features(df: pd.DataFrame) -> pd.DataFrame:
 
     no_spend = (df_copy["TotalSpending"].fillna(0) == 0).astype(int)
     df_copy["_no_spend"] = no_spend
-    df_copy["GroupTransportedProxy"] = (
-        df_copy.groupby("TravelGroup")["_no_spend"].transform("mean")
-    )
+    df_copy["GroupTransportedProxy"] = df_copy.groupby("TravelGroup")[
+        "_no_spend"
+    ].transform("mean")
     df_copy = df_copy.drop(columns=["_no_spend"])
 
-    cabin_p = df_copy["CabinNumber"].map(
-        df_copy[df_copy["Side"] == "P"].groupby("CabinNumber")["TotalSpending"].mean()
-    ).fillna(0)
-    cabin_s = df_copy["CabinNumber"].map(
-        df_copy[df_copy["Side"] == "S"].groupby("CabinNumber")["TotalSpending"].mean()
-    ).fillna(0)
+    cabin_p = (
+        df_copy["CabinNumber"]
+        .map(
+            df_copy[df_copy["Side"] == "P"]
+            .groupby("CabinNumber")["TotalSpending"]
+            .mean()
+        )
+        .fillna(0)
+    )
+    cabin_s = (
+        df_copy["CabinNumber"]
+        .map(
+            df_copy[df_copy["Side"] == "S"]
+            .groupby("CabinNumber")["TotalSpending"]
+            .mean()
+        )
+        .fillna(0)
+    )
     df_copy["SideSpendingDiff"] = np.abs(cabin_p - cabin_s)
 
-    df_copy["CryoSleepBinary"] = df_copy["CryoSleep"].map(
-        {True: 1, "True": 1, False: 0, "False": 0, "Unknown": -1}
-    ).fillna(-1)
+    df_copy["CryoSleepBinary"] = (
+        df_copy["CryoSleep"]
+        .map({True: 1, "True": 1, False: 0, "False": 0, "Unknown": -1})
+        .fillna(-1)
+    )
 
     return df_copy
 
@@ -126,10 +141,7 @@ def create_spend_cluster_features(df: pd.DataFrame) -> pd.DataFrame:
         + df_copy["VRDeck"].fillna(0)
         + df_copy["Spa"].fillna(0)
     )
-    comfort = (
-        df_copy["RoomService"].fillna(0)
-        + df_copy["ShoppingMall"].fillna(0)
-    )
+    comfort = df_copy["RoomService"].fillna(0) + df_copy["ShoppingMall"].fillna(0)
     df_copy["EntertainmentSpend_Log"] = np.log1p(entertainment)
     df_copy["ComfortSpend_Log"] = np.log1p(comfort)
     df_copy["EntVsComfort_Ratio"] = np.log1p(entertainment) - np.log1p(comfort)
@@ -141,17 +153,17 @@ def create_spend_cluster_features(df: pd.DataFrame) -> pd.DataFrame:
     df_copy["IsExtremeSpender"] = is_extreme.astype(int)
 
     planet_median = (
-        df_copy["HomePlanet"]
-        .map(_PLANET_AGE_MEDIAN)
-        .fillna(_GLOBAL_AGE_MEDIAN)
+        df_copy["HomePlanet"].map(_PLANET_AGE_MEDIAN).fillna(_GLOBAL_AGE_MEDIAN)
     )
-    df_copy["AgeVsPlanetMedian"] = df_copy["Age"].fillna(_GLOBAL_AGE_MEDIAN) - planet_median
+    df_copy["AgeVsPlanetMedian"] = (
+        df_copy["Age"].fillna(_GLOBAL_AGE_MEDIAN) - planet_median
+    )
 
     cryo_int = _cryo_to_int(df_copy["CryoSleep"])
     df_copy["_cryo_int"] = cryo_int
     group_min = df_copy.groupby("TravelGroup")["_cryo_int"].transform("min")
     group_max = df_copy.groupby("TravelGroup")["_cryo_int"].transform("max")
-    is_solo = (df_copy.groupby("TravelGroup")["TravelGroup"].transform("count") == 1)
+    is_solo = df_copy.groupby("TravelGroup")["TravelGroup"].transform("count") == 1
 
     segment = pd.Series(0, index=df_copy.index, dtype=int)
     segment[is_solo] = 1

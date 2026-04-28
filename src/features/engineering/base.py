@@ -5,10 +5,9 @@ Cubre extracción de columnas estructurales, imputación, reglas de dominio
 y creación de features fundamentales. Todas las funciones son puras:
 nunca mutan el input (siempre df.copy()).
 """
+
 import pandas as pd
 import numpy as np
-
-from src.features.engineering.encoders import _cryo_to_int
 
 
 _SPENDING_COLS = ["RoomService", "FoodCourt", "ShoppingMall", "Spa", "VRDeck"]
@@ -55,8 +54,8 @@ def extract_group_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     df_copy = df.copy()
     df_copy["TravelGroup"] = df_copy["PassengerId"].str.split("_").str[0]
-    df_copy["GroupSize"] = (
-        df_copy.groupby("TravelGroup")["TravelGroup"].transform("count")
+    df_copy["GroupSize"] = df_copy.groupby("TravelGroup")["TravelGroup"].transform(
+        "count"
     )
     return df_copy
 
@@ -76,9 +75,7 @@ def create_spending_features(df: pd.DataFrame) -> pd.DataFrame:
     df_copy = df.copy()
     df_copy["TotalSpending"] = df_copy[_SPENDING_COLS].fillna(0).sum(axis=1)
     df_copy["HasSpending"] = (df_copy["TotalSpending"] > 0).astype(int)
-    df_copy["SpendingCategories"] = (
-        (df_copy[_SPENDING_COLS].fillna(0) > 0).sum(axis=1)
-    )
+    df_copy["SpendingCategories"] = (df_copy[_SPENDING_COLS].fillna(0) > 0).sum(axis=1)
     df_copy["TotalSpending_Log"] = np.log1p(df_copy["TotalSpending"])
     return df_copy
 
@@ -95,6 +92,7 @@ def create_age_features(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         DataFrame con columna 'AgeCategory' añadida.
     """
+
     def _categorize(age) -> str:
         if pd.isna(age):
             return "Unknown"
@@ -173,8 +171,8 @@ def apply_domain_rules(df: pd.DataFrame) -> pd.DataFrame:
         .first()
     )
     hp_null = df_copy["HomePlanet"].isna()
-    df_copy.loc[hp_null, "HomePlanet"] = (
-        df_copy.loc[hp_null, "TravelGroup"].map(known_hp)
+    df_copy.loc[hp_null, "HomePlanet"] = df_copy.loc[hp_null, "TravelGroup"].map(
+        known_hp
     )
 
     # Regla 2: Deck → HomePlanet
@@ -187,9 +185,7 @@ def apply_domain_rules(df: pd.DataFrame) -> pd.DataFrame:
         if col not in df_copy.columns:
             continue
         known_val = (
-            df_copy[df_copy[col] != "Unknown"]
-            .groupby("TravelGroup")[col]
-            .first()
+            df_copy[df_copy[col] != "Unknown"].groupby("TravelGroup")[col].first()
         )
         unknown_mask = df_copy[col] == "Unknown"
         filled = df_copy.loc[unknown_mask, "TravelGroup"].map(known_val)

@@ -1,4 +1,5 @@
 """Features derivadas de comportamiento y coherencia de grupo."""
+
 import numpy as np
 import pandas as pd
 
@@ -45,9 +46,9 @@ def create_group_spending_features(df: pd.DataFrame) -> pd.DataFrame:
 
     cryo_int = _cryo_to_int(df_copy["CryoSleep"])
     df_copy["_cryo_num"] = cryo_int
-    df_copy["GroupCryoSleepRate"] = (
-        df_copy.groupby("TravelGroup")["_cryo_num"].transform("mean")
-    )
+    df_copy["GroupCryoSleepRate"] = df_copy.groupby("TravelGroup")[
+        "_cryo_num"
+    ].transform("mean")
     df_copy = df_copy.drop(columns=["_cryo_num"])
 
     cryo_true = df_copy["CryoSleep"].isin([True, "True"])
@@ -59,9 +60,9 @@ def create_group_spending_features(df: pd.DataFrame) -> pd.DataFrame:
 
     df_copy = _add_cabin_percentile(df_copy)
 
-    df_copy["GroupSpendingMean"] = (
-        df_copy.groupby("TravelGroup")["TotalSpending"].transform("mean")
-    )
+    df_copy["GroupSpendingMean"] = df_copy.groupby("TravelGroup")[
+        "TotalSpending"
+    ].transform("mean")
 
     return df_copy
 
@@ -139,16 +140,16 @@ def create_group_consistency_features(df: pd.DataFrame) -> pd.DataFrame:
     )
     group_size = df_copy.groupby("TravelGroup")["TravelGroup"].transform("count")
     df_copy["GroupAllSameDest"] = (
-        ((dest_nunique == 1) & (dest_filled != "Unknown") & (group_size > 1)).astype(int)
-    )
+        (dest_nunique == 1) & (dest_filled != "Unknown") & (group_size > 1)
+    ).astype(int)
 
     hp_nunique = df_copy.groupby("TravelGroup")["HomePlanet"].transform(
         lambda x: x.fillna("Unknown").nunique()
     )
     hp_filled = df_copy["HomePlanet"].fillna("Unknown")
     df_copy["GroupAllSameHomePlanet"] = (
-        ((hp_nunique == 1) & (hp_filled != "Unknown") & (group_size > 1)).astype(int)
-    )
+        (hp_nunique == 1) & (hp_filled != "Unknown") & (group_size > 1)
+    ).astype(int)
 
     df_copy["GroupConsistencyScore"] = (
         df_copy["GroupAllSameDest"] + df_copy["GroupAllSameHomePlanet"]

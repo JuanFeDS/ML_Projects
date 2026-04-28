@@ -11,6 +11,7 @@ Uso:
     df_train = fs.pipeline(df_raw)
     df_test  = fs.test_pipeline(df_raw_test)
 """
+
 from typing import List
 
 from src.features.feature_sets.config import FeatureSetConfig
@@ -38,13 +39,27 @@ from src.features.feature_sets.pipelines import (
 # ---------------------------------------------------------------------------
 
 _FS001_NUMERIC: List[str] = [
-    "Age", "RoomService", "FoodCourt", "ShoppingMall", "Spa", "VRDeck",
-    "GroupSize", "CabinNumber", "TotalSpending_Log", "SpendingCategories",
+    "Age",
+    "RoomService",
+    "FoodCourt",
+    "ShoppingMall",
+    "Spa",
+    "VRDeck",
+    "GroupSize",
+    "CabinNumber",
+    "TotalSpending_Log",
+    "SpendingCategories",
 ]
 _FS001_CATEGORICAL: List[str] = ["HomePlanet", "Destination", "Deck", "AgeCategory"]
 _FS001_DROP: List[str] = [
-    "PassengerId", "Name", "Cabin", "TravelGroup",
-    "CryoSleep", "VIP", "Side", "TotalSpending",
+    "PassengerId",
+    "Name",
+    "Cabin",
+    "TravelGroup",
+    "CryoSleep",
+    "VIP",
+    "Side",
+    "TotalSpending",
 ]
 
 # ---------------------------------------------------------------------------
@@ -57,13 +72,20 @@ _FS004_CATEGORICAL: List[str] = ["Destination", "AgeCategory"]
 _FS004_DROP: List[str] = _FS001_DROP
 
 _FS012_TARGET_ENCODE: List[str] = _FS004_TARGET_ENCODE + ["Route"]
-_FS012_NUMERIC: List[str] = _FS004_NUMERIC + ["IsChild", "GroupHasChild", "GroupChildRate", "Route_TE"]
+_FS012_NUMERIC: List[str] = _FS004_NUMERIC + [
+    "IsChild",
+    "GroupHasChild",
+    "GroupChildRate",
+    "Route_TE",
+]
 
 _FS017_TARGET_ENCODE: List[str] = _FS004_TARGET_ENCODE + ["LastName"]
 _FS017_NUMERIC: List[str] = _FS004_NUMERIC + ["LastName_TE"]
 
 _FS018_NUMERIC: List[str] = _FS004_NUMERIC + [
-    "GroupAllSameDest", "GroupAllSameHomePlanet", "GroupConsistencyScore",
+    "GroupAllSameDest",
+    "GroupAllSameHomePlanet",
+    "GroupConsistencyScore",
 ]
 
 # ---------------------------------------------------------------------------
@@ -71,35 +93,31 @@ _FS018_NUMERIC: List[str] = _FS004_NUMERIC + [
 # ---------------------------------------------------------------------------
 
 FEATURE_SETS: dict = {
-
     # --- Activos ---
-
     "fs-001_baseline": FeatureSetConfig(
         description=(
             "Features base: Cabin→Deck/Side/CabinNumber, PassengerId→GroupSize, "
             "spending log+categorias, AgeCategory."
         ),
         parent=None,
-        pipeline=lambda df: _pipeline_fs001(df),
+        pipeline=_pipeline_fs001,
         test_pipeline=lambda df: _pipeline_fs001(df, impute_age=True),
         numeric_features=_FS001_NUMERIC,
         categorical_cols=_FS001_CATEGORICAL,
         features_to_drop=_FS001_DROP,
     ),
-
     "fs-003_solo_interactions": FeatureSetConfig(
         description=(
             "fs-001 + IsAlone (GroupSize==1), IsChild (Age<13), "
             "SpendingIntensity (TotalSpending/(SpendingCategories+1))."
         ),
         parent="fs-001_baseline",
-        pipeline=lambda df: _pipeline_fs003(df),
+        pipeline=_pipeline_fs003,
         test_pipeline=lambda df: _pipeline_fs003(df, impute_age=True),
         numeric_features=_FS001_NUMERIC + ["IsAlone", "IsChild", "SpendingIntensity"],
         categorical_cols=_FS001_CATEGORICAL,
         features_to_drop=_FS001_DROP,
     ),
-
     "fs-004_target_encoding": FeatureSetConfig(
         description=(
             "fs-001 con Deck y HomePlanet reemplazados por Target Encoding. "
@@ -107,14 +125,13 @@ FEATURE_SETS: dict = {
             "y aportan información ordinal que OHE no captura."
         ),
         parent="fs-001_baseline",
-        pipeline=lambda df: _pipeline_fs004(df),
+        pipeline=_pipeline_fs004,
         test_pipeline=lambda df: _pipeline_fs004(df, impute_age=True),
         numeric_features=_FS004_NUMERIC,
         categorical_cols=_FS004_CATEGORICAL,
         features_to_drop=_FS004_DROP,
         target_encode_cols=_FS004_TARGET_ENCODE,
     ),
-
     "fs-005_structural_context": FeatureSetConfig(
         description=(
             "fs-001 + 7 features estructurales: SpendingEntropy, GroupSpendingZScore, "
@@ -122,49 +139,55 @@ FEATURE_SETS: dict = {
             "SpendingCategoryProfile (TE), GroupAgeDispersion."
         ),
         parent="fs-001_baseline",
-        pipeline=lambda df: _pipeline_fs005(df),
+        pipeline=_pipeline_fs005,
         test_pipeline=lambda df: _pipeline_fs005(df, impute_age=True),
-        numeric_features=_FS001_NUMERIC + [
-            "SpendingEntropy", "GroupSpendingZScore", "CabinNeighborhoodDensity",
-            "FamilySizeFromName", "GroupCryoAlignment", "GroupAgeDispersion",
+        numeric_features=_FS001_NUMERIC
+        + [
+            "SpendingEntropy",
+            "GroupSpendingZScore",
+            "CabinNeighborhoodDensity",
+            "FamilySizeFromName",
+            "GroupCryoAlignment",
+            "GroupAgeDispersion",
             "SpendingCategoryProfile_TE",
         ],
         categorical_cols=_FS001_CATEGORICAL,
         features_to_drop=_FS001_DROP,
         target_encode_cols=["SpendingCategoryProfile"],
     ),
-
     "fs-010_cryo_spending": FeatureSetConfig(
         description=(
             "fs-004 + 4 interacciones CryoSleep × spending: "
             "CryoSpendingAnomaly, GroupTransportedProxy, SideSpendingDiff, CryoSleepBinary."
         ),
         parent="fs-004_target_encoding",
-        pipeline=lambda df: _pipeline_fs010(df),
+        pipeline=_pipeline_fs010,
         test_pipeline=lambda df: _pipeline_fs010(df, impute_age=True),
-        numeric_features=_FS004_NUMERIC + [
-            "CryoSpendingAnomaly", "GroupTransportedProxy",
-            "SideSpendingDiff", "CryoSleepBinary",
+        numeric_features=_FS004_NUMERIC
+        + [
+            "CryoSpendingAnomaly",
+            "GroupTransportedProxy",
+            "SideSpendingDiff",
+            "CryoSleepBinary",
         ],
         categorical_cols=_FS004_CATEGORICAL,
         features_to_drop=_FS004_DROP,
         target_encode_cols=_FS004_TARGET_ENCODE,
     ),
-
     "fs-011_child_route": FeatureSetConfig(
         description=(
             "fs-004 + contexto familiar (IsChild, GroupHasChild, GroupChildRate) "
             "+ Route (OHE, 9 combinaciones)."
         ),
         parent="fs-004_target_encoding",
-        pipeline=lambda df: _pipeline_fs011(df),
+        pipeline=_pipeline_fs011,
         test_pipeline=lambda df: _pipeline_fs011(df, impute_age=True),
-        numeric_features=_FS004_NUMERIC + ["IsChild", "GroupHasChild", "GroupChildRate"],
+        numeric_features=_FS004_NUMERIC
+        + ["IsChild", "GroupHasChild", "GroupChildRate"],
         categorical_cols=_FS004_CATEGORICAL + ["Route"],
         features_to_drop=_FS004_DROP,
         target_encode_cols=_FS004_TARGET_ENCODE,
     ),
-
     "fs-012_child_route_te": FeatureSetConfig(
         description=(
             "fs-011 con Route como Target Encoding. "
@@ -172,14 +195,13 @@ FEATURE_SETS: dict = {
             "que OHE no puede expresar). Mejor Kaggle: 0.80617."
         ),
         parent="fs-011_child_route",
-        pipeline=lambda df: _pipeline_fs011(df),
+        pipeline=_pipeline_fs011,
         test_pipeline=lambda df: _pipeline_fs011(df, impute_age=True),
         numeric_features=_FS012_NUMERIC,
         categorical_cols=_FS004_CATEGORICAL,
         features_to_drop=_FS004_DROP,
         target_encode_cols=_FS012_TARGET_ENCODE,
     ),
-
     "fs-013_group_context": FeatureSetConfig(
         description=(
             "fs-004 + Age imputada por grupo + 4 features de comportamiento colectivo: "
@@ -187,16 +209,19 @@ FEATURE_SETS: dict = {
             "SpendShare (corr=-0.15), GroupSpendOthers_Log (corr=+0.09)."
         ),
         parent="fs-004_target_encoding",
-        pipeline=lambda df: _pipeline_fs013(df),
+        pipeline=_pipeline_fs013,
         test_pipeline=lambda df: _pipeline_fs013(df, impute_age=True),
-        numeric_features=_FS004_NUMERIC + [
-            "GroupAllCryo", "GroupAnyCryo", "SpendShare", "GroupSpendOthers_Log",
+        numeric_features=_FS004_NUMERIC
+        + [
+            "GroupAllCryo",
+            "GroupAnyCryo",
+            "SpendShare",
+            "GroupSpendOthers_Log",
         ],
         categorical_cols=_FS004_CATEGORICAL,
         features_to_drop=_FS004_DROP,
         target_encode_cols=_FS004_TARGET_ENCODE,
     ),
-
     "fs-016_transductive": FeatureSetConfig(
         description=(
             "fs-015 con imputación transductiva: train.csv + test.csv se combinan "
@@ -207,14 +232,13 @@ FEATURE_SETS: dict = {
             "Misma dimensionalidad que fs-004/fs-015."
         ),
         parent="fs-015_domain_imputation",
-        pipeline=lambda df: _pipeline_fs015(df),
+        pipeline=_pipeline_fs015,
         test_pipeline=lambda df: _pipeline_fs015(df, impute_age=True),
         numeric_features=_FS004_NUMERIC,
         categorical_cols=_FS004_CATEGORICAL,
         features_to_drop=_FS004_DROP,
         target_encode_cols=_FS004_TARGET_ENCODE,
     ),
-
     "fs-015_domain_imputation": FeatureSetConfig(
         description=(
             "fs-004 con imputación agresiva por reglas de dominio antes de engineering. "
@@ -227,14 +251,13 @@ FEATURE_SETS: dict = {
             "Misma dimensionalidad que fs-004 — diferencia es calidad de imputación."
         ),
         parent="fs-004_target_encoding",
-        pipeline=lambda df: _pipeline_fs015(df),
+        pipeline=_pipeline_fs015,
         test_pipeline=lambda df: _pipeline_fs015(df, impute_age=True),
         numeric_features=_FS004_NUMERIC,
         categorical_cols=_FS004_CATEGORICAL,
         features_to_drop=_FS004_DROP,
         target_encode_cols=_FS004_TARGET_ENCODE,
     ),
-
     "fs-014_spend_clusters": FeatureSetConfig(
         description=(
             "fs-013 + 6 features derivadas del EDA 2026-04-12: "
@@ -247,20 +270,27 @@ FEATURE_SETS: dict = {
             "(NoCryo 33.9% / Solo 45.2% / AnyCryo 60.4% / AllCryo 92.2%)."
         ),
         parent="fs-013_group_context",
-        pipeline=lambda df: _pipeline_fs014(df),
+        pipeline=_pipeline_fs014,
         test_pipeline=lambda df: _pipeline_fs014(df, impute_age=True),
-        numeric_features=_FS004_NUMERIC + [
+        numeric_features=_FS004_NUMERIC
+        + [
             # heredadas de fs-013
-            "GroupAllCryo", "GroupAnyCryo", "SpendShare", "GroupSpendOthers_Log",
+            "GroupAllCryo",
+            "GroupAnyCryo",
+            "SpendShare",
+            "GroupSpendOthers_Log",
             # nuevas fs-014
-            "EntertainmentSpend_Log", "ComfortSpend_Log", "EntVsComfort_Ratio",
-            "IsExtremeSpender", "AgeVsPlanetMedian", "GroupCryoSegment",
+            "EntertainmentSpend_Log",
+            "ComfortSpend_Log",
+            "EntVsComfort_Ratio",
+            "IsExtremeSpender",
+            "AgeVsPlanetMedian",
+            "GroupCryoSegment",
         ],
         categorical_cols=_FS004_CATEGORICAL,
         features_to_drop=_FS004_DROP,
         target_encode_cols=_FS004_TARGET_ENCODE,
     ),
-
     "fs-017_lastname_te": FeatureSetConfig(
         description=(
             "fs-004 + LastName con Target Encoding fold-aware (sklearn TargetEncoder, cv=5). "
@@ -270,7 +300,7 @@ FEATURE_SETS: dict = {
             "TargetEncoder(smooth='auto') a LastName y passthrough al resto."
         ),
         parent="fs-004_target_encoding",
-        pipeline=lambda df: _pipeline_fs017(df),
+        pipeline=_pipeline_fs017,
         test_pipeline=lambda df: _pipeline_fs017(df, impute_age=True),
         numeric_features=_FS004_NUMERIC,
         categorical_cols=_FS004_CATEGORICAL,
@@ -278,7 +308,6 @@ FEATURE_SETS: dict = {
         target_encode_cols=_FS004_TARGET_ENCODE,
         fold_te_cols=["LastName"],
     ),
-
     "fs-019_pseudo_labeled": FeatureSetConfig(
         description=(
             "fs-017 con pseudo-labeling: entrenado sobre train.csv + 985 filas de "
@@ -287,7 +316,7 @@ FEATURE_SETS: dict = {
             "tamaño del dataset de entrenamiento (8,693 → 9,678 filas, +11.3%)."
         ),
         parent="fs-017_lastname_te",
-        pipeline=lambda df: _pipeline_fs019(df),
+        pipeline=_pipeline_fs019,
         test_pipeline=lambda df: _pipeline_fs019(df, impute_age=True),
         numeric_features=_FS004_NUMERIC,
         categorical_cols=_FS004_CATEGORICAL,
@@ -295,7 +324,6 @@ FEATURE_SETS: dict = {
         target_encode_cols=_FS004_TARGET_ENCODE,
         fold_te_cols=["LastName"],
     ),
-
     "fs-018_group_consistency": FeatureSetConfig(
         description=(
             "fs-017 + 3 features de coherencia interna de grupo (sin usar target). "
@@ -305,7 +333,7 @@ FEATURE_SETS: dict = {
             "Complementa LastName fold-aware TE con señal estructural del grupo."
         ),
         parent="fs-017_lastname_te",
-        pipeline=lambda df: _pipeline_fs018(df),
+        pipeline=_pipeline_fs018,
         test_pipeline=lambda df: _pipeline_fs018(df, impute_age=True),
         numeric_features=_FS018_NUMERIC,
         categorical_cols=_FS004_CATEGORICAL,
@@ -313,9 +341,7 @@ FEATURE_SETS: dict = {
         target_encode_cols=_FS004_TARGET_ENCODE,
         fold_te_cols=["LastName"],
     ),
-
     # --- Deprecados (referencia histórica, no usar en nuevos experimentos) ---
-
     "fs-002_cryo_interactions": FeatureSetConfig(
         description=(
             "[DEPRECADO] fs-001 + Route, GroupCryoSleepRate, CryoSleepViolation, "
@@ -323,38 +349,40 @@ FEATURE_SETS: dict = {
             "No superó al baseline (exp-002)."
         ),
         parent="fs-001_baseline",
-        pipeline=lambda df: _pipeline_fs002(df),
+        pipeline=_pipeline_fs002,
         test_pipeline=lambda df: _pipeline_fs002(df, impute_age=True),
-        numeric_features=_FS001_NUMERIC + [
-            "GroupCryoSleepRate", "CryoSleepViolation",
-            "LuxurySpendingRatio", "CabinNumber_DeckPercentile", "GroupSpendingMean",
+        numeric_features=_FS001_NUMERIC
+        + [
+            "GroupCryoSleepRate",
+            "CryoSleepViolation",
+            "LuxurySpendingRatio",
+            "CabinNumber_DeckPercentile",
+            "GroupSpendingMean",
         ],
         categorical_cols=_FS001_CATEGORICAL + ["Route"],
         features_to_drop=_FS001_DROP,
         deprecated=True,
     ),
-
     "fs-006_group_imputation": FeatureSetConfig(
         description=(
             "[DEPRECADO] fs-001 con imputación group-aware de spending. "
             "No superó al baseline (exp-006)."
         ),
         parent="fs-001_baseline",
-        pipeline=lambda df: _pipeline_fs006(df),
+        pipeline=_pipeline_fs006,
         test_pipeline=lambda df: _pipeline_fs006(df, impute_age=True),
         numeric_features=_FS001_NUMERIC,
         categorical_cols=_FS001_CATEGORICAL,
         features_to_drop=_FS001_DROP,
         deprecated=True,
     ),
-
     "fs-007_domain_rules": FeatureSetConfig(
         description=(
             "[DEPRECADO] 6 reglas físicas + TravelGroup_TE. "
             "TravelGroup_TE introdujo data leakage (val 0.945, Kaggle n/a)."
         ),
         parent="fs-001_baseline",
-        pipeline=lambda df: _pipeline_fs007(df),
+        pipeline=_pipeline_fs007,
         test_pipeline=lambda df: _pipeline_fs007(df, impute_age=True),
         numeric_features=_FS001_NUMERIC + ["TravelGroup_TE"],
         categorical_cols=_FS001_CATEGORICAL,
@@ -362,32 +390,37 @@ FEATURE_SETS: dict = {
         target_encode_cols=["TravelGroup"],
         deprecated=True,
     ),
-
     "fs-008_domain_rules_only": FeatureSetConfig(
         description=(
             "[DEPRECADO] 6 reglas físicas sin TravelGroup_TE. "
             "No superó al baseline (exp-008)."
         ),
         parent="fs-001_baseline",
-        pipeline=lambda df: _pipeline_fs007(df),
+        pipeline=_pipeline_fs007,
         test_pipeline=lambda df: _pipeline_fs007(df, impute_age=True),
         numeric_features=_FS001_NUMERIC,
         categorical_cols=_FS001_CATEGORICAL,
         features_to_drop=_FS001_DROP,
         deprecated=True,
     ),
-
     "fs-009_percentile_cabin": FeatureSetConfig(
         description=(
             "[DEPRECADO] fs-008 + CabinNumber_DeckPercentile. "
             "No superó al baseline (exp-009)."
         ),
         parent="fs-008_domain_rules_only",
-        pipeline=lambda df: _pipeline_fs009(df),
+        pipeline=_pipeline_fs009,
         test_pipeline=lambda df: _pipeline_fs009(df, impute_age=True),
         numeric_features=[
-            "Age", "RoomService", "FoodCourt", "ShoppingMall", "Spa", "VRDeck",
-            "GroupSize", "CabinNumber_DeckPercentile", "TotalSpending_Log",
+            "Age",
+            "RoomService",
+            "FoodCourt",
+            "ShoppingMall",
+            "Spa",
+            "VRDeck",
+            "GroupSize",
+            "CabinNumber_DeckPercentile",
+            "TotalSpending_Log",
             "SpendingCategories",
         ],
         categorical_cols=_FS001_CATEGORICAL,
