@@ -1,6 +1,9 @@
+# pylint: disable=dangerous-default-value
 """Entrenamiento y evaluacion de CatBoost con categoricas nativas."""
+
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from typing import List
 
 import numpy as np
@@ -10,9 +13,26 @@ from catboost import CatBoostClassifier, Pool
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import GroupKFold, StratifiedKFold
 
-from src.scripts.common import CAT_FEATURES_NATIVE
+from src.preprocessing.common import CAT_FEATURES_NATIVE
 
 optuna.logging.set_verbosity(optuna.logging.WARNING)
+
+
+@dataclass
+class GroupKFoldConfig:
+    """Configuracion para oof_proba_groupkfold."""
+
+    n_splits: int = 5
+    cat_features: List[str] = field(default_factory=lambda: list(CAT_FEATURES_NATIVE))
+
+
+@dataclass
+class CatBoostTuneConfig:
+    """Configuracion para el tuning de CatBoost con Optuna."""
+
+    n_iter: int
+    study_db: str
+    cat_features: List[str] = field(default_factory=lambda: list(CAT_FEATURES_NATIVE))
 
 
 def make_pool(
@@ -71,14 +91,7 @@ def cv_score(
     return float(np.mean(scores))
 
 
-def tune(
-    x: pd.DataFrame,
-    y: pd.Series,
-    cv: StratifiedKFold,
-    n_iter: int,
-    study_db: str,
-    cat_features: List[str] = CAT_FEATURES_NATIVE,
-) -> dict:
+def tune(x: pd.DataFrame, y: pd.Series, cv: StratifiedKFold, config: CatBoostTuneConfig) -> dict:
     """Optimiza hiperparametros de CatBoost con Optuna TPE.
 
     Persiste el estudio en SQLite para reanudar si el script falla.
@@ -87,13 +100,12 @@ def tune(
         x: Features de entrenamiento.
         y: Target de entrenamiento.
         cv: Estrategia de cross-validation.
-        n_iter: Total de trials deseados (se resta los ya completados).
-        study_db: Ruta al archivo SQLite del estudio.
-        cat_features: Columnas categoricas para el Pool.
+        config: Configuracion de tuning (n_iter, study_db, cat_features).
 
     Returns:
         Diccionario con los mejores hiperparametros encontrados.
     """
+
     def objective(trial: optuna.Trial) -> float:
         params = {
             "iterations": trial.suggest_int("iterations", 300, 1000),
@@ -103,20 +115,19 @@ def tune(
             "bagging_temperature": trial.suggest_float("bagging_temperature", 0.0, 1.0),
             "random_seed": 42,
         }
-        return cv_score(params, x, y, cv, cat_features)
+        return cv_score(params, x, y, cv, config.cat_features)
 
     study = optuna.create_study(
         direction="maximize",
         sampler=optuna.samplers.TPESampler(seed=42),
-        storage=f"sqlite:///{study_db}",
+        storage=f"sqlite:///{config.study_db}",
         study_name="catboost_native",
         load_if_exists=True,
     )
     completed = sum(
-        1 for t in study.trials
-        if t.state == optuna.trial.TrialState.COMPLETE
+        1 for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE
     )
-    remaining = max(0, n_iter - completed)
+    remaining = max(0, config.n_iter - completed)
     if remaining == 0:
         print(f"  Estudio ya tiene {completed} trials. Saltando tuning.")
     else:
@@ -163,8 +174,7 @@ def oof_proba_groupkfold(
     x: pd.DataFrame,
     y: pd.Series,
     groups: np.ndarray,
-    n_splits: int = 5,
-    cat_features: List[str] = CAT_FEATURES_NATIVE,
+    config: GroupKFoldConfig | None = None,
 ) -> np.ndarray:
     """Genera probabilidades OOF con GroupKFold para evitar leakage de familia.
 
@@ -176,21 +186,21 @@ def oof_proba_groupkfold(
         x: Features de entrenamiento (con categoricas como strings).
         y: Target de entrenamiento.
         groups: Array de grupos (ej. LastName) de la misma longitud que x.
-        n_splits: Numero de folds GroupKFold.
-        cat_features: Columnas categoricas para el Pool.
+        config: Configuracion de GroupKFold (n_splits, cat_features).
 
     Returns:
         Array de probabilidades OOF (misma longitud que x).
     """
-    gkf = GroupKFold(n_splits=n_splits)
+    cfg = config or GroupKFoldConfig()
+    gkf = GroupKFold(n_splits=cfg.n_splits)
     proba = np.zeros(len(y))
 
     for fold, (tr_idx, val_idx) in enumerate(gkf.split(x, y, groups=groups), 1):
         x_tr, x_val = x.iloc[tr_idx], x.iloc[val_idx]
         y_tr, y_val = y.iloc[tr_idx], y.iloc[val_idx]
 
-        pool_tr = Pool(x_tr, y_tr, cat_features=cat_features)
-        pool_val = Pool(x_val, cat_features=cat_features)
+        pool_tr = Pool(x_tr, y_tr, cat_features=cfg.cat_features)
+        pool_val = Pool(x_val, cat_features=cfg.cat_features)
         model = CatBoostClassifier(**params, verbose=0, allow_writing_files=False)
         model.fit(pool_tr)
         proba[val_idx] = model.predict_proba(pool_val)[:, 1]
@@ -200,7 +210,7 @@ def oof_proba_groupkfold(
         groups_val_set = set(groups[val_idx])
         overlap = len(groups_tr & groups_val_set)
         print(
-            f"  Fold {fold}/{n_splits} — acc={fold_acc:.4f} | "
+            f"  Fold {fold}/{cfg.n_splits} — acc={fold_acc:.4f} | "
             f"val_groups={len(groups_val_set):,} | overlap={overlap}"
         )
 
