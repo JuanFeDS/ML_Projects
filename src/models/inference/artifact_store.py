@@ -1,4 +1,5 @@
 """Utilidades para cargar y guardar artefactos de experimentos y submissions."""
+
 from __future__ import annotations
 
 import json
@@ -155,10 +156,12 @@ def save_submission(
     """
     SUBMISSIONS_DIR.mkdir(parents=True, exist_ok=True)
     sub_path = SUBMISSIONS_DIR / f"exp-{exp_id}_submission.csv"
-    pd.DataFrame({
-        "PassengerId": test_ids.values,
-        "Transported": predictions,
-    }).to_csv(sub_path, index=False)
+    pd.DataFrame(
+        {
+            "PassengerId": test_ids.values,
+            "Transported": predictions,
+        }
+    ).to_csv(sub_path, index=False)
     return sub_path
 
 
@@ -173,7 +176,9 @@ def load_production_feature_set(meta_prod: dict) -> tuple:
     Returns:
         Tupla (fs_name, FeatureSetConfig).
     """
-    from src.features.feature_sets import FEATURE_SETS  # pylint: disable=import-outside-toplevel
+    from src.features.feature_sets import (
+        FEATURE_SETS,
+    )  # pylint: disable=import-outside-toplevel
 
     fs_name = meta_prod.get("feature_set_name", "fs-001_baseline")
     if fs_name not in FEATURE_SETS:
