@@ -2,6 +2,7 @@
 Análisis básico del dataset: dimensiones, nulos, tipos, balance del target
 y features derivadas simples (TotalSpending, GroupSize, SpendingCategories).
 """
+
 from typing import Any, Dict, List
 
 import numpy as np
@@ -16,11 +17,13 @@ def compute_null_summary(df: pd.DataFrame) -> pd.DataFrame:
     null_counts = df.isnull().sum()
     null_pct = (null_counts / len(df) * 100).round(2)
     return (
-        pd.DataFrame({
-            "Columna": null_counts.index,
-            "Nulos": null_counts.values,
-            "% Nulos": null_pct.values,
-        })
+        pd.DataFrame(
+            {
+                "Columna": null_counts.index,
+                "Nulos": null_counts.values,
+                "% Nulos": null_pct.values,
+            }
+        )
         .query("Nulos > 0")
         .reset_index(drop=True)
     )
@@ -76,11 +79,13 @@ def run_basic_analysis(df: pd.DataFrame) -> Dict[str, Any]:
         "shape": df.shape,
         "nulls": compute_null_summary(df),
         "dupes": int(df.duplicated().sum()),
-        "dtypes": pd.DataFrame({
-            "Columna": df.columns,
-            "Tipo": df.dtypes.values,
-            "Valores unicos": [df[c].nunique() for c in df.columns],
-        }),
+        "dtypes": pd.DataFrame(
+            {
+                "Columna": df.columns,
+                "Tipo": df.dtypes.values,
+                "Valores unicos": [df[c].nunique() for c in df.columns],
+            }
+        ),
     }
 
 
@@ -91,11 +96,13 @@ def run_target_analysis(df: pd.DataFrame) -> Dict[str, Any]:
     return {
         "counts": counts,
         "pcts": pcts,
-        "balance_df": pd.DataFrame({
-            "Clase": counts.index.astype(str),
-            "Conteo": counts.values,
-            "% del total": pcts.values.round(2),
-        }),
+        "balance_df": pd.DataFrame(
+            {
+                "Clase": counts.index.astype(str),
+                "Conteo": counts.values,
+                "% del total": pcts.values.round(2),
+            }
+        ),
     }
 
 
@@ -146,13 +153,22 @@ def compute_vip_profile(df: pd.DataFrame) -> Dict[str, Any]:
     non_vip = df[~vip_mask & df["VIP"].notna()]
 
     return {
-        "counts": {"VIP": int(vip_mask.sum()), "no_VIP": int((~vip_mask & df["VIP"].notna()).sum())},
+        "counts": {
+            "VIP": int(vip_mask.sum()),
+            "no_VIP": int((~vip_mask & df["VIP"].notna()).sum()),
+        },
         "transported_rate": {
             "VIP": round(vip[TARGET].mean(), 4),
             "no_VIP": round(non_vip[TARGET].mean(), 4),
         },
-        "homeplanet_dist": vip["HomePlanet"].value_counts(normalize=True).round(4).to_dict(),
-        "destination_dist": vip["Destination"].value_counts(normalize=True).round(4).to_dict(),
+        "homeplanet_dist": vip["HomePlanet"]
+        .value_counts(normalize=True)
+        .round(4)
+        .to_dict(),
+        "destination_dist": vip["Destination"]
+        .value_counts(normalize=True)
+        .round(4)
+        .to_dict(),
         "cryo_dist": vip["CryoSleep"].value_counts(normalize=True).round(4).to_dict(),
         "age_median": {
             "VIP": round(vip["Age"].median(), 1),

@@ -5,6 +5,7 @@ La limpieza y transformaciones base viven en el `pipeline` de cada
 `FeatureSet` (ver src/features/feature_sets.py). Este módulo ofrece una API
 única para scripts y tests.
 """
+
 from __future__ import annotations
 
 from typing import Any, Dict
