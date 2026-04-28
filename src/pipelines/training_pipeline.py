@@ -5,6 +5,7 @@ Carga datos escalados, ejecuta CV / tuning / ensambles, gestiona artefactos
 y documentacion en docs/. Los reportes operacionales (reports/) se emiten
 via ReportFactory a partir del dict retornado por TrainingPipeline.run().
 """
+
 from __future__ import annotations
 
 import json
@@ -30,23 +31,29 @@ from src.config.settings import (
 from src.config.vcs import create_git_tag, get_git_commit
 from src.features.constants import TARGET
 from src.features.feature_sets import FEATURE_SETS
-from src.models.catalogue import MODELS, PARAM_SPACES
 from src.models.ensembles import build_moe, build_stacking
-from src.models.errors import analyze_errors
-from src.models.evaluation import compute_oof_metrics, evaluate_models, optimize_threshold
-from src.models.pipeline_utils import add_model_prefix, make_fold_te_pipeline, prefix_param_space
+from src.models.evaluation import analyze_errors, compute_oof_metrics, evaluate_models, optimize_threshold
 from src.models.tracking import mlrun
-from src.models.tuning import tune_model
+from src.models.training import (
+    MODELS,
+    PARAM_SPACES,
+    TuneConfig,
+    add_model_prefix,
+    make_fold_te_pipeline,
+    prefix_param_space,
+    tune_model,
+)
 from src.reports.experiments.log import (
+    ExperimentContext,
     append_experiment_log,
     get_next_exp_id,
     is_duplicate_experiment,
 )
 from src.reports.experiments.model_cards import write_experiment_card, write_model_card
-from src.reports.training.shap_plots import compute_shap_plots
+from src.reports.training.shap_plots import ValPredictions, compute_shap_plots
 
 
-class TrainingPipeline:
+class TrainingPipeline:  # pylint: disable=too-many-instance-attributes,too-few-public-methods
     """Orquesta el ciclo completo de entrenamiento para un feature set dado.
 
     Etapas:
@@ -134,11 +141,9 @@ class TrainingPipeline:
 
     def _evaluate(self) -> None:
         """Evaluacion CV de todos los modelos del catalogo."""
-        _NOT_TUNABLE = {"Baseline"}
+        _NOT_TUNABLE = {"Baseline"}  # pylint: disable=invalid-name
         models_to_eval = (
-            {self.model_name: MODELS[self.model_name]}
-            if self.model_name
-            else MODELS
+            {self.model_name: MODELS[self.model_name]} if self.model_name else MODELS
         )
         if self.fold_te_cols:
             print(f"  Fold-aware TE activo para: {self.fold_te_cols}")
@@ -151,12 +156,21 @@ class TrainingPipeline:
         self._cv_results = evaluate_models(models_to_eval, self._x_df, self._y, self.cv)
         print(self._cv_results.to_string())
 
-        self._best_name = self.model_name if self.model_name else next(
-            n for n in self._cv_results.index
-            if n not in _NOT_TUNABLE and n in PARAM_SPACES
+        self._best_name = (
+            self.model_name
+            if self.model_name
+            else next(
+                n
+                for n in self._cv_results.index
+                if n not in _NOT_TUNABLE and n in PARAM_SPACES
+            )
         )
-        self._best_cv_score = float(self._cv_results.loc[self._best_name, "cv_accuracy_mean"])
-        print(f"  Modelo seleccionado: {self._best_name} | CV: {self._best_cv_score:.4f}")
+        self._best_cv_score = float(
+            self._cv_results.loc[self._best_name, "cv_accuracy_mean"]
+        )
+        print(
+            f"  Modelo seleccionado: {self._best_name} | CV: {self._best_cv_score:.4f}"
+        )
 
     def _tune(self) -> None:
         """Tuning de hiperparametros con Optuna."""
@@ -166,21 +180,28 @@ class TrainingPipeline:
             base = self._wrap_pipeline(MODELS[self._best_name])
             space_fn = (
                 prefix_param_space(PARAM_SPACES[self._best_name])
-                if self.fold_te_cols else PARAM_SPACES[self._best_name]
+                if self.fold_te_cols
+                else PARAM_SPACES[self._best_name]
             )
             transform = add_model_prefix if self.fold_te_cols else None
             self._tuned_model, raw_params, score = tune_model(
-                base, space_fn, self._x_df, self._y, self.cv,
-                n_iter=self.n_iter, param_transform=transform,
+                base,
+                self._x_df,
+                self._y,
+                self.cv,
+                TuneConfig(space_fn, n_iter=self.n_iter, param_transform=transform),
             )
             self._best_params = (
                 {k.replace("model__", ""): v for k, v in raw_params.items()}
-                if self.fold_te_cols else raw_params
+                if self.fold_te_cols
+                else raw_params
             )
             print(f"  CV tuneado: {score:.4f} | Params: {self._best_params}")
         else:
             self._tuned_model = self._wrap_pipeline(MODELS[self._best_name])
-            print(f"\n[SKIP] Tuning omitido -- usando params por defecto de {self._best_name}")
+            print(
+                f"\n[SKIP] Tuning omitido -- usando params por defecto de {self._best_name}"
+            )
 
     def _build_ensembles(self) -> None:
         """Construye Stacking y Mixture of Experts."""
@@ -188,8 +209,7 @@ class TrainingPipeline:
             print("\n[STACK] Construyendo Stacking...")
             self._top_names = [n for n in self._cv_results.index if n != "Baseline"][:3]
             base_estimators = [
-                (name, self._wrap_pipeline(MODELS[name]))
-                for name in self._top_names
+                (name, self._wrap_pipeline(MODELS[name])) for name in self._top_names
             ]
             self._stacking_model, self._stacking_cv_score = build_stacking(
                 base_estimators, self._x_df, self._y, self.cv
@@ -218,17 +238,27 @@ class TrainingPipeline:
                 "y_pred": [],
                 "y_proba": [],
             }
-            print(f"  MoE cryo: {sizes['cryo']:,} | activo: {sizes['active']:,} -> cv_acc={self._moe_cv_score:.4f}")
+            print(
+                f"  MoE cryo: {sizes['cryo']:,} | activo: {sizes['active']:,} -> cv_acc={self._moe_cv_score:.4f}"
+            )
 
     def _select_and_evaluate_winner(self) -> None:
         """Selecciona el ganador y calcula OOF, errores y umbral optimo."""
         print("\n[OOF] Calculando OOF del modelo tuneado...")
-        self._tuned_val = compute_oof_metrics(self._tuned_model, self._x_df, self._y, self.cv)
-        print(f"  {self._best_name} -> OOF acc={self._tuned_val['val_accuracy']:.4f} | roc_auc={self._tuned_val['val_roc_auc']:.4f}")
+        self._tuned_val = compute_oof_metrics(
+            self._tuned_model, self._x_df, self._y, self.cv
+        )
+        print(
+            f"  {self._best_name} -> OOF acc={self._tuned_val['val_accuracy']:.4f} | roc_auc={self._tuned_val['val_roc_auc']:.4f}"
+        )
 
-        candidates = [(self._best_name, self._tuned_model, self._tuned_val["val_accuracy"])]
+        candidates = [
+            (self._best_name, self._tuned_model, self._tuned_val["val_accuracy"])
+        ]
         if self._stacking_val:
-            candidates.append(("Stacking", self._stacking_model, self._stacking_cv_score))
+            candidates.append(
+                ("Stacking", self._stacking_model, self._stacking_cv_score)
+            )
         if self._moe_val:
             candidates.append(("MoE", self._moe_model, self._moe_cv_score))
 
@@ -238,17 +268,22 @@ class TrainingPipeline:
             if self._winner_name == self._best_name
             else compute_oof_metrics(self._winner_model, self._x_df, self._y, self.cv)
         )
-        print(f"\n[WIN] Ganador: {self._winner_name} | OOF acc={self._winner_val['val_accuracy']:.4f}")
+        print(
+            f"\n[WIN] Ganador: {self._winner_name} | OOF acc={self._winner_val['val_accuracy']:.4f}"
+        )
 
         self._error_tables = analyze_errors(
-            self._x_df, self._y,
+            self._x_df,
+            self._y,
             pd.Series(self._winner_val["y_pred"], index=self._y.index),
         )
         self._best_threshold, self._threshold_acc = optimize_threshold(
             self._y, self._winner_val["y_proba"]
         )
         gain = round(self._threshold_acc - self._winner_val["val_accuracy"], 4)
-        print(f"  Umbral optimo: {self._best_threshold:.4f} -> acc: {self._threshold_acc:.4f} (ganancia: {gain:+.4f})")
+        print(
+            f"  Umbral optimo: {self._best_threshold:.4f} -> acc: {self._threshold_acc:.4f} (ganancia: {gain:+.4f})"
+        )
 
     def _build_metadata(self) -> None:
         """Construye el diccionario de metadata del experimento."""
@@ -261,11 +296,13 @@ class TrainingPipeline:
         if self.fs.parent and self.fs.parent in FEATURE_SETS:
             parent_fs = FEATURE_SETS[self.fs.parent]
             current_cols = set(
-                self.fs.numeric_features + self.fs.categorical_cols
+                self.fs.numeric_features
+                + self.fs.categorical_cols
                 + list(self.fs.target_encode_cols)
             )
             parent_cols = set(
-                parent_fs.numeric_features + parent_fs.categorical_cols
+                parent_fs.numeric_features
+                + parent_fs.categorical_cols
                 + list(parent_fs.target_encode_cols)
             )
             features_added = sorted(current_cols - parent_cols)
@@ -274,7 +311,8 @@ class TrainingPipeline:
         effective_acc = max(self._winner_val["val_accuracy"], self._threshold_acc)
         effective_threshold = (
             self._best_threshold
-            if self._threshold_acc > self._winner_val["val_accuracy"] else 0.5
+            if self._threshold_acc > self._winner_val["val_accuracy"]
+            else 0.5
         )
 
         self._metadata = {
@@ -309,7 +347,9 @@ class TrainingPipeline:
             return
 
         EXPERIMENTS_DIR.mkdir(parents=True, exist_ok=True)
-        safe_name = self._winner_name.replace(" ", "_").replace("(", "").replace(")", "")
+        safe_name = (
+            self._winner_name.replace(" ", "_").replace("(", "").replace(")", "")
+        )
         exp_artifact = EXPERIMENTS_DIR / f"exp-{exp_id}_{safe_name}.pkl"
         joblib.dump(self._winner_model, exp_artifact)
         print(f"  [SAVE] Artefacto: {exp_artifact}")
@@ -333,24 +373,35 @@ class TrainingPipeline:
             print(f"  [PROD] [{label}] Promovido: {MODEL_PATH}")
             create_git_tag(exp_id, self.fs_name, effective_acc)
         else:
-            print(f"  [--] No promovido -- {effective_acc:.4f} no supera {current_best_acc:.4f}")
+            print(
+                f"  [--] No promovido -- {effective_acc:.4f} no supera {current_best_acc:.4f}"
+            )
 
         cards_dir = str(DOCS_DIR / "model" / "cards")
         append_experiment_log(
-            metadata=self._metadata, path=log_path, exp_id=exp_id,
-            promoted=self._promoted, current_best_acc=current_best_acc,
-            cv_results=self._cv_results,
-            features_added=self._metadata["features_added"],
-            features_removed=self._metadata["features_removed"],
+            metadata=self._metadata,
+            path=log_path,
+            exp_id=exp_id,
+            promoted=self._promoted,
+            context=ExperimentContext(
+                current_best_acc=current_best_acc,
+                cv_results=self._cv_results,
+                features_added=self._metadata["features_added"],
+                features_removed=self._metadata["features_removed"],
+            ),
         )
         write_experiment_card(
-            metadata=self._metadata, feature_names=feature_names,
-            exp_id=exp_id, cards_dir=cards_dir,
-            promoted=self._promoted, current_best_acc=current_best_acc,
+            metadata=self._metadata,
+            feature_names=feature_names,
+            exp_id=exp_id,
+            cards_dir=cards_dir,
+            promoted=self._promoted,
+            current_best_acc=current_best_acc,
         )
         if self._promoted:
             write_model_card(
-                metadata=self._metadata, feature_names=feature_names,
+                metadata=self._metadata,
+                feature_names=feature_names,
                 path=str(DOCS_DIR / "model" / "model_card.md"),
             )
 
@@ -361,7 +412,9 @@ class TrainingPipeline:
         mlflow.log_param("feature_set", self.fs_name)
         mlflow.log_param("winner_model", str(self._winner_name)[:250])
         mlflow.log_param("exp_id", str(self._metadata.get("exp_id", "")))
-        mlflow.log_metric("val_accuracy", float(self._metadata.get("val_accuracy", 0.0)))
+        mlflow.log_metric(
+            "val_accuracy", float(self._metadata.get("val_accuracy", 0.0))
+        )
         mlflow.log_metric("val_roc_auc", float(self._metadata.get("val_roc_auc", 0.0)))
         mlflow.log_metric("cv_accuracy", float(self._metadata.get("cv_accuracy", 0.0)))
         for k, v in list((self._best_params or {}).items())[:40]:
@@ -399,9 +452,11 @@ class TrainingPipeline:
                 shap_plots = compute_shap_plots(
                     model=self._winner_model,
                     x_train=self._x_df,
-                    x_val=self._x_df,
-                    y_val=self._y,
-                    y_proba=self._winner_val["y_proba"],
+                    val_preds=ValPredictions(
+                        X=self._x_df,
+                        y_true=self._y,
+                        y_proba=self._winner_val["y_proba"],
+                    ),
                     feature_names=self._metadata["feature_names"],
                 )
 
