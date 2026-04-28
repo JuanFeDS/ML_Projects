@@ -1,17 +1,18 @@
 """Generacion de predicciones OOF para los modelos base del stacking (exp-027, 033, 047)."""
+
 from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from catboost import CatBoostClassifier, Pool
+from catboost import CatBoostClassifier
 from sklearn.compose import ColumnTransformer
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import StratifiedKFold, cross_val_predict
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import TargetEncoder
 
-from src.models.catboost_native import oof_proba as catboost_oof_proba
-from src.scripts.common import CAT_FEATURES_NATIVE
+from src.models.training.catboost_native import oof_proba as catboost_oof_proba
+from src.preprocessing.common import CAT_FEATURES_NATIVE
 
 EXP_033_PARAMS = {
     "iterations": 546,
@@ -68,7 +69,9 @@ def oof_027(
     """
     pipe = _build_027_pipeline()
     print("  [027] cross_val_predict (5-fold)...")
-    proba = cross_val_predict(pipe, x_train, y_train, cv=cv, method="predict_proba")[:, 1]
+    proba = cross_val_predict(pipe, x_train, y_train, cv=cv, method="predict_proba")[
+        :, 1
+    ]
     print(f"  [027] OOF acc={accuracy_score(y_train, (proba >= 0.5).astype(int)):.4f}")
     return proba
 
@@ -115,7 +118,9 @@ def oof_tabpfn(
     Returns:
         Array de probabilidades OOF.
     """
-    from tabpfn_client import TabPFNClassifier  # pylint: disable=import-outside-toplevel
+    from tabpfn_client import (
+        TabPFNClassifier,
+    )  # pylint: disable=import-outside-toplevel
 
     proba = np.zeros(len(x))
     for fold_idx, (tr_idx, val_idx) in enumerate(cv.split(x, y), 1):

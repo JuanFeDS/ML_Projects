@@ -1,4 +1,5 @@
 """Analisis de errores del modelo por segmento del dataset."""
+
 from typing import Dict
 
 import pandas as pd
@@ -41,17 +42,9 @@ def analyze_errors(
         cols = [c for c in df_err.columns if c.startswith(f"{prefix}_")]
         if not cols:
             continue
-        segment = (
-            df_err[cols]
-            .idxmax(axis=1)
-            .str.replace(f"{prefix}_", "", regex=False)
-        )
+        segment = df_err[cols].idxmax(axis=1).str.replace(f"{prefix}_", "", regex=False)
         df_err[f"_{prefix}"] = segment
-        g = (
-            df_err.groupby(f"_{prefix}")["_error"]
-            .agg(["count", "sum"])
-            .reset_index()
-        )
+        g = df_err.groupby(f"_{prefix}")["_error"].agg(["count", "sum"]).reset_index()
         g.columns = [prefix, "n", "errors"]
         g["error_rate"] = (g["errors"] / g["n"]).round(4)
         results[prefix] = g.sort_values("error_rate", ascending=False)
