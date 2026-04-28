@@ -13,6 +13,7 @@ las features de gasto del experto cryo (todas son 0 → varianza = 0) y
 CryoSleep_Encoded del experto activo (varianza minima al ser constante por
 segmento), dejando a cada experto trabajar solo con senal relevante.
 """
+
 from typing import List, Optional
 
 import numpy as np
@@ -20,7 +21,9 @@ import pandas as pd
 from sklearn.base import BaseEstimator, ClassifierMixin, clone
 
 
-class MixtureOfExperts(BaseEstimator, ClassifierMixin):
+class MixtureOfExperts(  # pylint: disable=too-many-instance-attributes,attribute-defined-outside-init,invalid-name
+    BaseEstimator, ClassifierMixin
+):
     """Hard-gated MoE con enrutamiento por CryoSleep_Encoded.
 
     Entrena dos estimadores independientes:
@@ -104,8 +107,14 @@ class MixtureOfExperts(BaseEstimator, ClassifierMixin):
         x_active = X[active_mask]
 
         if self.drop_zero_variance:
-            self.cryo_cols_ = self._nonzero_cols(x_cryo) if cryo_mask.sum() > 0 else self.cryo_cols_
-            self.active_cols_ = self._nonzero_cols(x_active) if active_mask.sum() > 0 else self.active_cols_
+            self.cryo_cols_ = (
+                self._nonzero_cols(x_cryo) if cryo_mask.sum() > 0 else self.cryo_cols_
+            )
+            self.active_cols_ = (
+                self._nonzero_cols(x_active)
+                if active_mask.sum() > 0
+                else self.active_cols_
+            )
 
         if cryo_mask.sum() >= self.min_segment_size:
             self.expert_cryo_ = clone(self.base_estimator)
