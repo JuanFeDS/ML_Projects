@@ -3,13 +3,14 @@
 Separado de builder.py para evitar el ciclo de importacion:
   builder.py ← training/reports.py ← factory.py (unidireccional).
 """
+
 from __future__ import annotations
 
 from typing import Any, Dict, List
 
 import numpy as np
 
-from src.reports.training.reports import build_training_html, build_training_md
+from src.reports.training.reports import TrainingResults, build_training_html, build_training_md
 
 
 def _top_feature_names_for_insights(
@@ -63,7 +64,7 @@ def build_training_insights_context(results: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-class ReportFactory:
+class ReportFactory:  # pylint: disable=too-few-public-methods
     """Genera parejas MD/HTML de reportes operacionales a partir de resultados de pipeline."""
 
     @staticmethod
@@ -73,36 +74,24 @@ class ReportFactory:
         Args:
             results: Salida de src.pipelines.training_pipeline.TrainingPipeline.run().
         """
-        exp_id = results["metadata"]["exp_id"]
-        winner_name = results["winner_name"]
-        build_training_md(
+        tr = TrainingResults(
             cv_results=results["cv_results"],
             best_name=results["best_name"],
             best_params=results["best_params"],
             tuned_val=results["tuned_val"],
             stacking_val=results["stacking_val"],
             moe_val=results["moe_val"],
-            winner_name=winner_name,
+            winner_name=results["winner_name"],
             winner_val=results["winner_val"],
             top_names=results["top_names"],
             fs_name=results["fs_name"],
             error_tables=results["error_tables"],
             best_threshold=results["best_threshold"],
             threshold_acc=results["threshold_acc"],
-            exp_id=exp_id,
-        )
-        build_training_html(
-            cv_results=results["cv_results"],
-            tuned_val=results["tuned_val"],
-            stacking_val=results["stacking_val"],
-            moe_val=results["moe_val"],
-            best_name=results["best_name"],
+            exp_id=results["metadata"]["exp_id"],
             winner_model=results["winner_model"],
             feature_names=results["feature_names"],
-            error_tables=results["error_tables"],
-            best_threshold=results["best_threshold"],
-            threshold_acc=results["threshold_acc"],
-            exp_id=exp_id,
-            winner_name=winner_name,
             shap_plots=results.get("shap_plots", {}),
         )
+        build_training_md(tr)
+        build_training_html(tr)

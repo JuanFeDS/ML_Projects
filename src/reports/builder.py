@@ -4,6 +4,7 @@ Clases base para generacion de reportes Markdown y HTML.
 MarkdownReport: construye un .md con metricas, tablas y texto.
 HTMLReport: construye un .html con figuras Plotly embebidas y sidebar de navegacion.
 """
+
 import re
 from datetime import datetime
 from pathlib import Path
@@ -18,7 +19,14 @@ from src.reports.assets import _HTML_CSS, _HTML_JS, _LOGO_SVG
 def _slugify(text: str) -> str:
     """Convierte un titulo en un ID valido para ancla HTML."""
     slug = text.lower()
-    for src, dst in [("á", "a"), ("é", "e"), ("í", "i"), ("ó", "o"), ("ú", "u"), ("ñ", "n")]:
+    for src, dst in [
+        ("á", "a"),
+        ("é", "e"),
+        ("í", "i"),
+        ("ó", "o"),
+        ("ú", "u"),
+        ("ñ", "n"),
+    ]:
         slug = slug.replace(src, dst)
     slug = re.sub(r"[^a-z0-9\s-]", "", slug)
     slug = re.sub(r"\s+", "-", slug.strip())
@@ -144,7 +152,7 @@ class HTMLReport:
             f'<div class="metric-card">'
             f'<span class="mv">{v}</span>'
             f'<span class="ml">{label}</span>'
-            f'</div>'
+            f"</div>"
             for v, label in pairs
         )
         self._blocks.append(f'<div class="metrics-grid">{cards}</div>')
@@ -213,7 +221,7 @@ class HTMLReport:
         toc_items = "\n".join(
             f'<a href="#{sid}" data-id="{sid}">'
             f'<span class="sb-num">{num}</span>'
-            f'{stitle}</a>'
+            f"{stitle}</a>"
             for sid, stitle, num in self._sections
         )
 

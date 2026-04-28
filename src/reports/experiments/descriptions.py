@@ -32,7 +32,6 @@ EXPERIMENT_DESCRIPTIONS: dict = {
         ),
         "tags": ["baseline", "cabin", "spending", "target-encoding"],
     },
-
     "fs-002_cryo_interactions": {
         "what": (
             "Agrega interacciones entre CryoSleep y las variables de gasto: "
@@ -51,7 +50,6 @@ EXPERIMENT_DESCRIPTIONS: dict = {
         ),
         "tags": ["interactions", "cryo", "spending"],
     },
-
     "fs-003_solo_interactions": {
         "what": (
             "Agrega features de viajero solo: IsAlone_x_TotalSpending, "
@@ -68,7 +66,6 @@ EXPERIMENT_DESCRIPTIONS: dict = {
         ),
         "tags": ["interactions", "solo", "group"],
     },
-
     "fs-004_target_encoding": {
         "what": (
             "Refinamiento del target encoding. Aplica TE con suavizado bayesiano (smoothing=10) "
@@ -86,7 +83,6 @@ EXPERIMENT_DESCRIPTIONS: dict = {
         ),
         "tags": ["target-encoding", "smoothing", "cabin"],
     },
-
     "fs-005_structural_context": {
         "what": (
             "Agrega features de contexto estructural del grupo de viaje: "
@@ -104,7 +100,6 @@ EXPERIMENT_DESCRIPTIONS: dict = {
         ),
         "tags": ["group", "context", "aggregation"],
     },
-
     "fs-006_group_imputation": {
         "what": (
             "Imputacion de nulos guiada por el grupo de viaje: si todos los demas miembros "
@@ -123,7 +118,6 @@ EXPERIMENT_DESCRIPTIONS: dict = {
         ),
         "tags": ["imputation", "group", "domain-rules"],
     },
-
     "fs-007_domain_rules": {
         "what": (
             "Aplica las 5 reglas de dominio fisicas del dataset como features directas: "
@@ -143,7 +137,6 @@ EXPERIMENT_DESCRIPTIONS: dict = {
         ),
         "tags": ["domain-rules", "data-leakage", "anomaly"],
     },
-
     "fs-008_domain_rules_only": {
         "what": (
             "Version depurada de fs-007. Solo usa las reglas de dominio que NO derivan "
@@ -160,7 +153,6 @@ EXPERIMENT_DESCRIPTIONS: dict = {
         ),
         "tags": ["domain-rules", "ablation"],
     },
-
     "fs-009_percentile_cabin": {
         "what": (
             "Agrega CabinNum_Percentile: la posicion percentil del numero de cabina "
@@ -177,7 +169,6 @@ EXPERIMENT_DESCRIPTIONS: dict = {
         ),
         "tags": ["cabin", "percentile", "spatial"],
     },
-
     "fs-010_cryo_spending": {
         "what": (
             "Agrega features de interaccion CryoSleep × cada servicio individual: "
@@ -196,7 +187,6 @@ EXPERIMENT_DESCRIPTIONS: dict = {
         ),
         "tags": ["cryo", "spending", "interactions", "zero-inflation"],
     },
-
     "fs-011_child_route": {
         "what": (
             "Agrega features especificas para ninos (Age <= 12): IsChild flag, "
@@ -215,7 +205,6 @@ EXPERIMENT_DESCRIPTIONS: dict = {
         ),
         "tags": ["age", "children", "route", "target-encoding"],
     },
-
     "fs-012_child_route_te": {
         "what": (
             "Extiende fs-011 con target encoding completo para la ruta "
@@ -235,7 +224,6 @@ EXPERIMENT_DESCRIPTIONS: dict = {
         ),
         "tags": ["target-encoding", "route", "group", "production", "best"],
     },
-
     "fs-013_group_context": {
         "what": (
             "Agrega features de contexto de grupo orientadas a CryoSleep colectivo: "

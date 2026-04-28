@@ -5,6 +5,7 @@ Recibe los resultados de todos los run_* y construye el reporte MD + HTML
 llamando a las funciones de plots/ por sección. Cada sección es independiente
 — si un análisis no está disponible en el dict, la sección se omite.
 """
+
 from typing import Any, Dict
 
 import pandas as pd
@@ -13,14 +14,39 @@ from src.config.settings import DOCS_DIR, REPORTS_DIR
 from src.features.constants import RAW_NUMERIC, TARGET
 from src.reports.builder import HTMLReport, MarkdownReport
 from src.reports.eda.plots.basic import (
-    correlation_heatmap, nulls_bar, numeric_boxplots, numeric_histograms,
-    numeric_stats_table, numeric_vs_target_hist, target_pie, unique_values_bar,
+    correlation_heatmap,
+    nulls_bar,
+    numeric_boxplots,
+    numeric_histograms,
+    numeric_stats_table,
+    numeric_vs_target_hist,
+    target_pie,
+    unique_values_bar,
 )
-from src.reports.eda.plots.bivariate import age_cryo_bar, cryo_homeplanet_heatmap, deck_homeplanet_heatmap
-from src.reports.eda.plots.cabin import deck_transport_rate_bar, side_transport_rate_bar, deck_homeplanet_heatmap as cabin_deck_heatmap
-from src.reports.eda.plots.categorical import categorical_double_bar, decisions_table, groupsize_bar
-from src.reports.eda.plots.domain_rules import imputation_opportunities_bar, violations_table
-from src.reports.eda.plots.spending import spending_per_service_bar, total_spending_compare, zero_inflation_bar
+from src.reports.eda.plots.bivariate import (
+    age_cryo_bar,
+    cryo_homeplanet_heatmap,
+    deck_homeplanet_heatmap,
+)
+from src.reports.eda.plots.cabin import (
+    deck_transport_rate_bar,
+    side_transport_rate_bar,
+    deck_homeplanet_heatmap as cabin_deck_heatmap,
+)
+from src.reports.eda.plots.categorical import (
+    categorical_double_bar,
+    decisions_table,
+    groupsize_bar,
+)
+from src.reports.eda.plots.domain_rules import (
+    imputation_opportunities_bar,
+    violations_table,
+)
+from src.reports.eda.plots.spending import (
+    spending_per_service_bar,
+    total_spending_compare,
+    zero_inflation_bar,
+)
 from src.reports.experiments.model_cards import write_data_quality_doc
 
 # ---------------------------------------------------------------------------
@@ -97,7 +123,10 @@ _CHI2_DEFAULT = "Asociación estadísticamente significativa. Ver gráfico para 
 # Secciones independientes
 # ---------------------------------------------------------------------------
 
-def _section_basic(md: MarkdownReport, html: HTMLReport, basic: dict, target: dict) -> None:
+
+def _section_basic(
+    md: MarkdownReport, html: HTMLReport, basic: dict, target: dict
+) -> None:
     md.add_section("Análisis Básico")
     html.add_section("Análisis Básico")
     md.add_text(_T["dtypes"])
@@ -115,17 +144,23 @@ def _section_basic(md: MarkdownReport, html: HTMLReport, basic: dict, target: di
     html.add_figure(target_pie(target["balance_df"]), title="Proporción del Target")
 
 
-def _section_numeric(md: MarkdownReport, html: HTMLReport, df: pd.DataFrame, stats: dict) -> None:
+def _section_numeric(
+    md: MarkdownReport, html: HTMLReport, df: pd.DataFrame, stats: dict
+) -> None:
     md.add_section("Variables Numéricas")
     html.add_section("Variables Numéricas")
     md.add_text(_T["numeric"])
     md.add_table(stats["numeric_desc"], index=True)
-    html.add_figure(numeric_stats_table(stats["numeric_desc"]), title="Estadísticas Descriptivas")
+    html.add_figure(
+        numeric_stats_table(stats["numeric_desc"]), title="Estadísticas Descriptivas"
+    )
     html.add_figure(numeric_histograms(df, RAW_NUMERIC), title="Histogramas")
     html.add_figure(numeric_boxplots(df, RAW_NUMERIC), title="Boxplots")
     corr_df = df[RAW_NUMERIC + [TARGET]].copy()
     corr_df[TARGET] = corr_df[TARGET].astype(int)
-    html.add_figure(correlation_heatmap(corr_df.corr().round(3)), title="Matriz de Correlación")
+    html.add_figure(
+        correlation_heatmap(corr_df.corr().round(3)), title="Matriz de Correlación"
+    )
 
 
 def _section_categorical(md: MarkdownReport, html: HTMLReport, stats: dict) -> None:
@@ -138,7 +173,9 @@ def _section_categorical(md: MarkdownReport, html: HTMLReport, stats: dict) -> N
         md.add_metric("p-valor", f"{res['p']:.2e}")
         md.add_text(_CHI2_INTERPRETATIONS.get(col, _CHI2_DEFAULT))
         html.add_figure(
-            categorical_double_bar(res["summary"], col, res["chi2"], res["p"], res["dof"]),
+            categorical_double_bar(
+                res["summary"], col, res["chi2"], res["p"], res["dof"]
+            ),
             title=col,
         )
 
@@ -150,24 +187,48 @@ def _section_cabin(md: MarkdownReport, html: HTMLReport, cabin: dict) -> None:
     md.add_metric("χ² Deck", f"{cabin['deck']['chi2']:.1f}")
     md.add_metric("χ² Side", f"{cabin['side']['chi2']:.1f}")
     md.add_metric("Cabin con NaN", f"{cabin['cabin_null_pct']:.2f}%")
-    html.add_figure(deck_transport_rate_bar(cabin["deck"]["summary"], cabin["deck"]["chi2"], cabin["deck"]["p"]), title="Deck vs Target")
-    html.add_figure(side_transport_rate_bar(cabin["side"]["summary"], cabin["side"]["chi2"], cabin["side"]["p"]), title="Side vs Target")
-    html.add_figure(cabin_deck_heatmap(cabin["deck_homeplanet"]), title="HomePlanet × Deck")
+    html.add_figure(
+        deck_transport_rate_bar(
+            cabin["deck"]["summary"], cabin["deck"]["chi2"], cabin["deck"]["p"]
+        ),
+        title="Deck vs Target",
+    )
+    html.add_figure(
+        side_transport_rate_bar(
+            cabin["side"]["summary"], cabin["side"]["chi2"], cabin["side"]["p"]
+        ),
+        title="Side vs Target",
+    )
+    html.add_figure(
+        cabin_deck_heatmap(cabin["deck_homeplanet"]), title="HomePlanet × Deck"
+    )
 
 
-def _section_spending(md: MarkdownReport, html: HTMLReport, derived: dict, spending: dict) -> None:
+def _section_spending(
+    md: MarkdownReport, html: HTMLReport, derived: dict, spending: dict
+) -> None:
     md.add_section("Análisis de Gasto")
     html.add_section("Análisis de Gasto")
     md.add_text(_T["spending_deep"])
     sp = derived["spending"]
     md.add_metric("r TotalSpending (crudo)", f"{sp['r_raw']:.3f}")
     md.add_metric("r TotalSpending (log1p)", f"{sp['r_log']:.3f}")
-    html.add_figure(total_spending_compare(
-        sp["group_f_raw"], sp["group_t_raw"], sp["group_f_log"], sp["group_t_log"],
-        sp["r_raw"], sp["r_log"],
-    ), title="TotalSpending: crudo vs log")
-    html.add_figure(spending_per_service_bar(spending["per_service"]), title="Análisis por Servicio")
-    html.add_figure(zero_inflation_bar(spending["zero_inflation"]["per_service_zero_pct"]), title="Zero-inflation por Servicio")
+    html.add_figure(
+        total_spending_compare(
+            (sp["group_f_raw"], sp["group_t_raw"]),
+            (sp["group_f_log"], sp["group_t_log"]),
+            sp["r_raw"],
+            sp["r_log"],
+        ),
+        title="TotalSpending: crudo vs log",
+    )
+    html.add_figure(
+        spending_per_service_bar(spending["per_service"]), title="Análisis por Servicio"
+    )
+    html.add_figure(
+        zero_inflation_bar(spending["zero_inflation"]["per_service_zero_pct"]),
+        title="Zero-inflation por Servicio",
+    )
     md.add_table(spending["per_service"], index=False)
 
 
@@ -177,8 +238,13 @@ def _section_domain_rules(md: MarkdownReport, html: HTMLReport, domain: dict) ->
     md.add_text(_T["domain_rules"])
     md.add_table(domain["violations"], index=False)
     md.add_table(domain["imputation_opportunities"], index=False)
-    html.add_figure(violations_table(domain["violations"]), title="Violaciones a Reglas Físicas")
-    html.add_figure(imputation_opportunities_bar(domain["imputation_opportunities"]), title="NaN Resolubles por Inferencia")
+    html.add_figure(
+        violations_table(domain["violations"]), title="Violaciones a Reglas Físicas"
+    )
+    html.add_figure(
+        imputation_opportunities_bar(domain["imputation_opportunities"]),
+        title="NaN Resolubles por Inferencia",
+    )
 
 
 def _section_bivariate(md: MarkdownReport, html: HTMLReport, bivariate: dict) -> None:
@@ -186,9 +252,16 @@ def _section_bivariate(md: MarkdownReport, html: HTMLReport, bivariate: dict) ->
     html.add_section("Análisis Bivariado")
     md.add_text(_T["bivariate"])
     md.add_table(bivariate["age_cryo"], index=False)
-    html.add_figure(cryo_homeplanet_heatmap(bivariate["cryo_homeplanet"]), title="HomePlanet × CryoSleep → Transported rate")
-    html.add_figure(deck_homeplanet_heatmap(bivariate["deck_homeplanet"]), title="HomePlanet × Deck")
-    html.add_figure(age_cryo_bar(bivariate["age_cryo"]), title="Age y Gasto por estado CryoSleep")
+    html.add_figure(
+        cryo_homeplanet_heatmap(bivariate["cryo_homeplanet"]),
+        title="HomePlanet × CryoSleep → Transported rate",
+    )
+    html.add_figure(
+        deck_homeplanet_heatmap(bivariate["deck_homeplanet"]), title="HomePlanet × Deck"
+    )
+    html.add_figure(
+        age_cryo_bar(bivariate["age_cryo"]), title="Age y Gasto por estado CryoSleep"
+    )
 
 
 def _section_group(md: MarkdownReport, html: HTMLReport, group: dict) -> None:
@@ -201,7 +274,9 @@ def _section_group(md: MarkdownReport, html: HTMLReport, group: dict) -> None:
         "imputar HomePlanet por otros miembros sin ambigüedad."
     )
     homog = group["homeplanet_homogeneity"]
-    md.add_metric("Grupos mixtos (HomePlanet)", str(homog["n_grupos_mixtos_homeplanet"]))
+    md.add_metric(
+        "Grupos mixtos (HomePlanet)", str(homog["n_grupos_mixtos_homeplanet"])
+    )
     md.add_metric("% grupos homogéneos", f"{homog['pct_homogeneous']:.1f}%")
 
     md.add_subsection("Solo vs Agrupado")
@@ -222,24 +297,69 @@ def _section_group(md: MarkdownReport, html: HTMLReport, group: dict) -> None:
 
     fam = group["family_stats"]
     md.add_subsection("Indicador de familia (apellido)")
-    md.add_metric("Grupos con mismo apellido", f"{fam['grupos_mismo_apellido']} / {fam['n_grupos_multi']} ({fam['pct_familia']:.1f}%)")
+    md.add_metric(
+        "Grupos con mismo apellido",
+        f"{fam['grupos_mismo_apellido']} / {fam['n_grupos_multi']} ({fam['pct_familia']:.1f}%)",
+    )
 
 
-def _section_decisions(md: MarkdownReport, derived: dict, spending: dict) -> None:
+def _section_decisions(md: MarkdownReport, derived: dict, spending: dict) -> None:  # pylint: disable=unused-argument
     sp = derived["spending"]
     gs = derived["groupsize"]
-    decisions = pd.DataFrame([
-        {"Feature": "CryoSleep",     "Acción": "MANTENER",        "Justificación": "χ²=1861.75 — variable más discriminativa"},
-        {"Feature": "HomePlanet",    "Acción": "MANTENER + TE",   "Justificación": "χ²=324.97, target encoding > OHE"},
-        {"Feature": "Destination",   "Acción": "MANTENER + OHE",  "Justificación": "χ²=106.39, 3 categorías"},
-        {"Feature": "VIP",           "Acción": "MANTENER",        "Justificación": "Señal débil pero significativa (p=0.002)"},
-        {"Feature": "Cabin",         "Acción": "DESCOMPONER",     "Justificación": "Deck chi²=392.3, Side chi²=91.1 — target encoding"},
-        {"Feature": "TotalSpending", "Acción": "CREAR + log1p",   "Justificación": f"r_log={sp['r_log']:.3f} vs r_raw={sp['r_raw']:.3f}"},
-        {"Feature": "GroupSize",     "Acción": "CREAR",           "Justificación": f"χ²={gs['chi2']:.2f}, patrón no lineal"},
-        {"Feature": "Age",           "Acción": "MANTENER",        "Justificación": "Normal (skew=0.42), imputar por grupo"},
-        {"Feature": "Name",          "Acción": "DESCARTAR",       "Justificación": "Sin señal predictiva directa"},
-        {"Feature": "PassengerId",   "Acción": "DESCARTAR (raw)", "Justificación": "Usar solo para extraer TravelGroup"},
-    ])
+    decisions = pd.DataFrame(
+        [
+            {
+                "Feature": "CryoSleep",
+                "Acción": "MANTENER",
+                "Justificación": "χ²=1861.75 — variable más discriminativa",
+            },
+            {
+                "Feature": "HomePlanet",
+                "Acción": "MANTENER + TE",
+                "Justificación": "χ²=324.97, target encoding > OHE",
+            },
+            {
+                "Feature": "Destination",
+                "Acción": "MANTENER + OHE",
+                "Justificación": "χ²=106.39, 3 categorías",
+            },
+            {
+                "Feature": "VIP",
+                "Acción": "MANTENER",
+                "Justificación": "Señal débil pero significativa (p=0.002)",
+            },
+            {
+                "Feature": "Cabin",
+                "Acción": "DESCOMPONER",
+                "Justificación": "Deck chi²=392.3, Side chi²=91.1 — target encoding",
+            },
+            {
+                "Feature": "TotalSpending",
+                "Acción": "CREAR + log1p",
+                "Justificación": f"r_log={sp['r_log']:.3f} vs r_raw={sp['r_raw']:.3f}",
+            },
+            {
+                "Feature": "GroupSize",
+                "Acción": "CREAR",
+                "Justificación": f"χ²={gs['chi2']:.2f}, patrón no lineal",
+            },
+            {
+                "Feature": "Age",
+                "Acción": "MANTENER",
+                "Justificación": "Normal (skew=0.42), imputar por grupo",
+            },
+            {
+                "Feature": "Name",
+                "Acción": "DESCARTAR",
+                "Justificación": "Sin señal predictiva directa",
+            },
+            {
+                "Feature": "PassengerId",
+                "Acción": "DESCARTAR (raw)",
+                "Justificación": "Usar solo para extraer TravelGroup",
+            },
+        ]
+    )
     md.add_section("Decisiones de Feature Engineering")
     md.add_text(_T["decisions"])
     md.add_table(decisions, index=False)
@@ -248,6 +368,7 @@ def _section_decisions(md: MarkdownReport, derived: dict, spending: dict) -> Non
 # ---------------------------------------------------------------------------
 # Punto de entrada
 # ---------------------------------------------------------------------------
+
 
 def build_eda_report(df: pd.DataFrame, results: Dict[str, Any]) -> None:
     """Construye el reporte MD + HTML a partir de los resultados del análisis.
@@ -269,11 +390,15 @@ def build_eda_report(df: pd.DataFrame, results: Dict[str, Any]) -> None:
     html.add_intro(
         f"Análisis exploratorio de <b>Spaceship Titanic</b> ({n_rows:,} registros, {n_cols} variables)."
     )
-    html.add_metrics_grid([
-        (f"{n_rows:,}", "registros"), (n_cols, "variables"),
-        (len(basic["nulls"]), "cols con nulos"), (basic["dupes"], "duplicados"),
-        (f"{target_res['pcts'].get(True, 0):.1f}%", "tasa transported"),
-    ])
+    html.add_metrics_grid(
+        [
+            (f"{n_rows:,}", "registros"),
+            (n_cols, "variables"),
+            (len(basic["nulls"]), "cols con nulos"),
+            (basic["dupes"], "duplicados"),
+            (f"{target_res['pcts'].get(True, 0):.1f}%", "tasa transported"),
+        ]
+    )
     md.add_text(_T["intro"])
 
     _section_basic(md, html, basic, target_res)
@@ -288,10 +413,15 @@ def build_eda_report(df: pd.DataFrame, results: Dict[str, Any]) -> None:
     else:
         # Sección básica de gasto (backward compat si spending no está disponible)
         sp = derived["spending"]
-        html.add_figure(total_spending_compare(
-            sp["group_f_raw"], sp["group_t_raw"], sp["group_f_log"], sp["group_t_log"],
-            sp["r_raw"], sp["r_log"],
-        ), title="TotalSpending: crudo vs log")
+        html.add_figure(
+            total_spending_compare(
+                (sp["group_f_raw"], sp["group_t_raw"]),
+                (sp["group_f_log"], sp["group_t_log"]),
+                sp["r_raw"],
+                sp["r_log"],
+            ),
+            title="TotalSpending: crudo vs log",
+        )
 
     if "domain_rules" in results:
         _section_domain_rules(md, html, results["domain_rules"])

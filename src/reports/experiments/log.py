@@ -1,11 +1,23 @@
 """
 Funciones para gestionar el log de experimentos en docs/model/experimentation_log.md.
 """
+
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
+
+
+@dataclass
+class ExperimentContext:
+    """Contexto opcional para append_experiment_log."""
+
+    current_best_acc: Optional[float] = None
+    cv_results: Optional[Any] = None
+    features_added: Optional[List[str]] = field(default=None)
+    features_removed: Optional[List[str]] = field(default=None)
 
 
 def is_duplicate_experiment(metadata: dict, log_path: str) -> bool:
@@ -75,7 +87,6 @@ def get_next_exp_id(log_path: str, artifacts_dir: Optional[str] = None) -> str:
     is_template = not existing or "## Experimentos" in existing or "EXP-001" in existing
     log_count = 0 if is_template else existing.count("\n## Exp-")
 
-    # Scan artifacts dir for exp-NNN_* filenames
     if artifacts_dir is None:
         artifacts_dir = str(out.parent.parent.parent / "models" / "experiments")
     arts_dir = Path(artifacts_dir)
@@ -93,15 +104,12 @@ def get_next_exp_id(log_path: str, artifacts_dir: Optional[str] = None) -> str:
     return f"{next_id:03d}"
 
 
-def append_experiment_log(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+def append_experiment_log(
     metadata: dict,
     path: str,
     exp_id: str,
     promoted: bool,
-    current_best_acc: Optional[float] = None,
-    cv_results: Optional[Any] = None,
-    features_added: Optional[List[str]] = None,
-    features_removed: Optional[List[str]] = None,
+    context: Optional[ExperimentContext] = None,
 ) -> None:
     """Agrega una nueva entrada detallada al log de experimentos.
 
@@ -114,11 +122,10 @@ def append_experiment_log(  # pylint: disable=too-many-arguments,too-many-positi
         path: Ruta del archivo experimentation_log.md.
         exp_id: ID del experimento, e.g. '003'. Debe obtenerse con get_next_exp_id().
         promoted: True si el modelo supero al actual en produccion.
-        current_best_acc: val_accuracy del modelo en produccion antes de este run.
-        cv_results: DataFrame con resultados de CV de todos los modelos.
-        features_added: Lista de features anadidas vs el feature set parent.
-        features_removed: Lista de features eliminadas vs el feature set parent.
+        context: Contexto opcional (current_best_acc, cv_results, features_added/removed).
     """
+    ctx = context or ExperimentContext()
+
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
 
@@ -127,7 +134,9 @@ def append_experiment_log(  # pylint: disable=too-many-arguments,too-many-positi
     if is_template:
         existing = "# Experimentation Log — Spaceship Titanic\n\n"
 
-    status = "🏆 Promovido a produccion" if promoted else "❌ No supero al modelo actual"
+    status = (
+        "🏆 Promovido a produccion" if promoted else "❌ No supero al modelo actual"
+    )
     date_str = datetime.now().strftime("%Y-%m-%d %H:%M")
     model_name = metadata.get("model_name", "—")
     new_acc = metadata.get("val_accuracy", "—")
@@ -142,10 +151,10 @@ def append_experiment_log(  # pylint: disable=too-many-arguments,too-many-positi
 
     lines.append("\n### Metricas\n\n")
     acc_line = f"- **val_accuracy:** {new_acc}"
-    if current_best_acc is not None and isinstance(new_acc, float):
-        diff = new_acc - current_best_acc
+    if ctx.current_best_acc is not None and isinstance(new_acc, float):
+        diff = new_acc - ctx.current_best_acc
         sign = "+" if diff >= 0 else ""
-        acc_line += f"  _(ref: {current_best_acc}, {sign}{diff:.4f})_"
+        acc_line += f"  _(ref: {ctx.current_best_acc}, {sign}{diff:.4f})_"
     lines.append(acc_line + "\n")
     lines += [
         f"- **val_roc_auc:** {metadata.get('val_roc_auc', '—')}\n",
@@ -158,16 +167,24 @@ def append_experiment_log(  # pylint: disable=too-many-arguments,too-many-positi
     lines.append("\n### Feature Set\n\n")
     lines += [
         f"- **nombre:** `{fs_name}`\n",
-        f"- **parent:** `{fs_parent}`\n" if fs_parent else "- **parent:** ninguno (primer set)\n",
+        (
+            f"- **parent:** `{fs_parent}`\n"
+            if fs_parent
+            else "- **parent:** ninguno (primer set)\n"
+        ),
         f"- **descripcion:** {fs_description}\n",
     ]
-    if features_added:
-        lines.append(f"- **features anadidas vs parent ({len(features_added)}):** "
-                     f"{', '.join(f'`{f}`' for f in features_added)}\n")
-    if features_removed:
-        lines.append(f"- **features eliminadas vs parent ({len(features_removed)}):** "
-                     f"{', '.join(f'`{f}`' for f in features_removed)}\n")
-    if not features_added and not features_removed and fs_parent:
+    if ctx.features_added:
+        lines.append(
+            f"- **features anadidas vs parent ({len(ctx.features_added)}):** "
+            f"{', '.join(f'`{f}`' for f in ctx.features_added)}\n"
+        )
+    if ctx.features_removed:
+        lines.append(
+            f"- **features eliminadas vs parent ({len(ctx.features_removed)}):** "
+            f"{', '.join(f'`{f}`' for f in ctx.features_removed)}\n"
+        )
+    if not ctx.features_added and not ctx.features_removed and fs_parent:
         lines.append("- **cambios vs parent:** solo se modifico el tipo de encoding\n")
 
     lines.append("\n### Modelo\n\n")
@@ -178,9 +195,9 @@ def append_experiment_log(  # pylint: disable=too-many-arguments,too-many-positi
         for k, v in best_params.items():
             lines.append(f"  - `{k}`: {v}\n")
 
-    if cv_results is not None:
+    if ctx.cv_results is not None:
         lines.append("\n### Cross-Validation — todos los modelos\n\n")
-        cv_display = cv_results.reset_index().rename(columns={"index": "Modelo"})
+        cv_display = ctx.cv_results.reset_index().rename(columns={"index": "Modelo"})
         lines.append(cv_display.to_markdown(index=False) + "\n")
 
     lines.append("\n---\n")
