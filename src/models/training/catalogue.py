@@ -8,6 +8,7 @@ PARAM_SPACES contiene callables (trial) -> dict compatibles con Optuna.
 Cada funcion define el espacio de busqueda de un modelo usando la API
 de sugerencias de Optuna (suggest_int, suggest_float, suggest_categorical).
 """
+
 from typing import Any, Callable, Dict
 
 from sklearn.dummy import DummyClassifier
@@ -22,7 +23,6 @@ from catboost import CatBoostClassifier
 from xgboost import XGBClassifier
 from lightgbm import LGBMClassifier
 
-from src.models.moe import MixtureOfExperts
 
 MODELS: Dict[str, Any] = {
     "Baseline": DummyClassifier(strategy="most_frequent", random_state=42),
@@ -30,24 +30,18 @@ MODELS: Dict[str, Any] = {
     "RandomForest": RandomForestClassifier(
         n_estimators=100, random_state=42, n_jobs=-1
     ),
-    "GradientBoosting": GradientBoostingClassifier(
-        n_estimators=100, random_state=42
-    ),
+    "GradientBoosting": GradientBoostingClassifier(n_estimators=100, random_state=42),
     "HistGradientBoosting": HistGradientBoostingClassifier(
         max_iter=200, random_state=42
     ),
-    "ExtraTrees": ExtraTreesClassifier(
-        n_estimators=200, random_state=42, n_jobs=-1
-    ),
+    "ExtraTrees": ExtraTreesClassifier(n_estimators=200, random_state=42, n_jobs=-1),
     "XGBoost": XGBClassifier(
         n_estimators=200,
         random_state=42,
         eval_metric="logloss",
         verbosity=0,
     ),
-    "LightGBM": LGBMClassifier(
-        n_estimators=200, random_state=42, verbose=-1
-    ),
+    "LightGBM": LGBMClassifier(n_estimators=200, random_state=42, verbose=-1),
     "CatBoost": CatBoostClassifier(
         iterations=200, random_seed=42, verbose=0, allow_writing_files=False
     ),
@@ -62,6 +56,7 @@ MOE_BASE_ESTIMATOR = CatBoostClassifier(
 # ---------------------------------------------------------------------------
 # Espacios de busqueda Optuna — (trial) -> dict de hiperparametros
 # ---------------------------------------------------------------------------
+
 
 def _logistic_space(trial) -> dict:
     return {
@@ -91,7 +86,9 @@ def _gradient_boosting_space(trial) -> dict:
 def _histgb_space(trial) -> dict:
     return {
         "max_iter": trial.suggest_categorical("max_iter", [100, 200, 400]),
-        "max_leaf_nodes": trial.suggest_categorical("max_leaf_nodes", [15, 31, 63, 127]),
+        "max_leaf_nodes": trial.suggest_categorical(
+            "max_leaf_nodes", [15, 31, 63, 127]
+        ),
         "max_depth": trial.suggest_categorical("max_depth", [None, 5, 10]),
         "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
         "l2_regularization": trial.suggest_float("l2_regularization", 0.0, 5.0),

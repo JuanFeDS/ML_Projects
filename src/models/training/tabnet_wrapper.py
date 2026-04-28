@@ -7,13 +7,16 @@ joblib.dump / load, predict_proba con DataFrames, etc.
 El wrapper convierte DataFrames a numpy internamente y expone
 get_params / set_params para compatibilidad con Optuna.
 """
+
 import numpy as np
 import pandas as pd
 from pytorch_tabnet.tab_model import TabNetClassifier
 from sklearn.base import BaseEstimator, ClassifierMixin
 
 
-class TabNetWrapper(BaseEstimator, ClassifierMixin):
+class TabNetWrapper(  # pylint: disable=too-many-instance-attributes,too-many-arguments,too-many-positional-arguments,invalid-name,attribute-defined-outside-init
+    BaseEstimator, ClassifierMixin
+):
     """Wrapper sklearn para TabNetClassifier.
 
     Parametros de arquitectura:

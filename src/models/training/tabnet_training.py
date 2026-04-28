@@ -1,15 +1,26 @@
 """Tuning y entrenamiento de TabNet con Optuna (sin dependencia de sklearn CV)."""
+
 from __future__ import annotations
 
-from typing import Dict, Tuple
+from dataclasses import dataclass
+from typing import Dict, Optional, Tuple
 
 import optuna
 import pandas as pd
 from sklearn.metrics import accuracy_score
 
-from src.models.tabnet_wrapper import TabNetWrapper
+from src.models.training.tabnet_wrapper import TabNetWrapper
 
 optuna.logging.set_verbosity(optuna.logging.WARNING)
+
+
+@dataclass
+class TabNetConfig:
+    """Configuracion de entrenamiento para TabNet."""
+
+    n_iter: int = 25
+    max_epochs: int = 200
+    patience: int = 20
 
 
 def param_space(trial: optuna.Trial) -> Dict:
@@ -38,11 +49,8 @@ def param_space(trial: optuna.Trial) -> Dict:
 def tune_tabnet(
     x_train: pd.DataFrame,
     y_train: pd.Series,
-    x_val: pd.DataFrame,
-    y_val: pd.Series,
-    n_iter: int = 25,
-    max_epochs: int = 200,
-    patience: int = 20,
+    eval_set: Tuple,
+    config: Optional[TabNetConfig] = None,
 ) -> Tuple[Dict, float]:
     """Optimiza hiperparametros de TabNet con Optuna usando split train/val directo.
 
@@ -52,20 +60,20 @@ def tune_tabnet(
     Args:
         x_train: Features de entrenamiento.
         y_train: Target de entrenamiento.
-        x_val: Features de validacion (para early stopping y evaluacion).
-        y_val: Target de validacion.
-        n_iter: Numero de trials de Optuna.
-        max_epochs: Maximo de epocas por trial.
-        patience: Epocas de early stopping.
+        eval_set: Tupla (x_val, y_val) para early stopping y evaluacion.
+        config: Configuracion de entrenamiento (n_iter, max_epochs, patience).
 
     Returns:
         Tupla (best_params, best_val_accuracy).
     """
+    cfg = config or TabNetConfig()
+    x_val, y_val = eval_set
+
     def objective(trial: optuna.Trial) -> float:
         params = param_space(trial)
         model = TabNetWrapper(
-            max_epochs=max_epochs,
-            patience=patience,
+            max_epochs=cfg.max_epochs,
+            patience=cfg.patience,
             virtual_batch_size=min(params["batch_size"] // 4, 256),
             **params,
         )
@@ -76,7 +84,7 @@ def tune_tabnet(
         direction="maximize",
         sampler=optuna.samplers.TPESampler(seed=42),
     )
-    study.optimize(objective, n_trials=n_iter, show_progress_bar=True)
+    study.optimize(objective, n_trials=cfg.n_iter, show_progress_bar=True)
     return study.best_params, round(study.best_value, 4)
 
 
@@ -84,10 +92,8 @@ def train_tabnet(
     best_params: Dict,
     x_train: pd.DataFrame,
     y_train: pd.Series,
-    x_val: pd.DataFrame | None = None,
-    y_val: pd.Series | None = None,
-    max_epochs: int = 200,
-    patience: int = 20,
+    eval_set: Optional[Tuple] = None,
+    config: Optional[TabNetConfig] = None,
 ) -> TabNetWrapper:
     """Entrena un TabNet final con los mejores hiperparametros.
 
@@ -95,20 +101,19 @@ def train_tabnet(
         best_params: Hiperparametros obtenidos de tune_tabnet.
         x_train: Features de entrenamiento.
         y_train: Target de entrenamiento.
-        x_val: Features de validacion para early stopping (opcional).
-        y_val: Target de validacion para early stopping (opcional).
-        max_epochs: Maximo de epocas de entrenamiento.
-        patience: Epocas de early stopping.
+        eval_set: Tupla (x_val, y_val) para early stopping (opcional).
+        config: Configuracion de entrenamiento (max_epochs, patience).
 
     Returns:
         Modelo TabNetWrapper entrenado.
     """
-    eval_set = [(x_val, y_val)] if x_val is not None else None
+    cfg = config or TabNetConfig()
+    fit_eval = [(eval_set[0], eval_set[1])] if eval_set is not None else None
     model = TabNetWrapper(
-        max_epochs=max_epochs,
-        patience=patience,
+        max_epochs=cfg.max_epochs,
+        patience=cfg.patience,
         virtual_batch_size=min(best_params["batch_size"] // 4, 256),
         **best_params,
     )
-    model.fit(x_train, y_train, eval_set=eval_set)
+    model.fit(x_train, y_train, eval_set=fit_eval)
     return model

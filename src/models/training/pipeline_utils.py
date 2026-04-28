@@ -1,4 +1,5 @@
 """Utilidades para construir Pipelines sklearn con preprocesamiento fold-aware."""
+
 from typing import Any, Callable, Dict, List
 
 from sklearn.compose import ColumnTransformer
@@ -39,8 +40,10 @@ def prefix_param_space(param_space_fn: Callable) -> Callable:
     Returns:
         Callable que devuelve el mismo dict con claves prefijadas con 'model__'.
     """
+
     def wrapped(trial: Any) -> Dict:
         return {f"model__{k}": v for k, v in param_space_fn(trial).items()}
+
     return wrapped
 
 
