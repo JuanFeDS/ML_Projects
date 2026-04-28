@@ -4,6 +4,7 @@ Configuracion de rutas del proyecto Spaceship Titanic.
 Carga las variables de entorno desde el archivo .env ubicado en la raiz
 del proyecto y expone objetos Path tipados listos para importar.
 """
+
 import os
 from pathlib import Path
 
@@ -14,17 +15,11 @@ BASE_DIR: Path = Path(__file__).resolve().parents[2]
 load_dotenv(BASE_DIR / ".env")
 
 # Directorios de datos
-DATA_RAW_DIR: Path = Path(
-    os.getenv(
-        "DATA_RAW_DIR", 
-        str(BASE_DIR / "data" / "raw"))
-)
+DATA_RAW_DIR: Path = Path(os.getenv("DATA_RAW_DIR", str(BASE_DIR / "data" / "raw")))
 
 # Directorio de datos procesados
 DATA_PROCESSED_DIR: Path = Path(
-    os.getenv(
-        "DATA_PROCESSED_DIR", 
-        str(BASE_DIR / "data" / "processed"))
+    os.getenv("DATA_PROCESSED_DIR", str(BASE_DIR / "data" / "processed"))
 )
 
 # Directorio de features
@@ -33,19 +28,11 @@ DATA_FEATURES_DIR: Path = BASE_DIR / "data" / "features"
 # Directorio de submissions
 SUBMISSIONS_DIR: Path = BASE_DIR / "data" / "submissions"
 
-# Directorio de modelos
-MODELS_DIR: Path = Path(
-    os.getenv(
-        "MODELS_DIR", 
-        str(BASE_DIR / "models"))
-)
+# Directorio de artefactos
+MODELS_DIR: Path = Path(os.getenv("MODELS_DIR", str(BASE_DIR / "artifacts")))
 
 # Directorio de reports
-REPORTS_DIR: Path = Path(
-    os.getenv(
-        "REPORTS_DIR", 
-        str(BASE_DIR / "reports"))
-)
+REPORTS_DIR: Path = Path(os.getenv("REPORTS_DIR", str(BASE_DIR / "reports")))
 
 # Directorio de docs
 DOCS_DIR: Path = BASE_DIR / "docs"
@@ -61,19 +48,21 @@ MODEL_PATH: Path = PRODUCTION_DIR / "best_model.pkl"
 MODEL_METADATA: Path = PRODUCTION_DIR / "model_metadata.json"
 
 # MLflow Tracking
-MLFLOW_TRACKING_URI: str = os.getenv("MLFLOW_TRACKING_URI", f"sqlite:///{BASE_DIR / 'mlflow.db'}")
+MLFLOW_TRACKING_URI: str = os.getenv(
+    "MLFLOW_TRACKING_URI", f"sqlite:///{BASE_DIR / 'mlflow.db'}"
+)
 MLFLOW_EXPERIMENT_NAME: str = os.getenv("MLFLOW_EXPERIMENT_NAME", "spacechip_titanic")
 
 # Prefijo del run padre al ejecutar el pipeline completo (run.py / run_pipeline.py)
 MLFLOW_PIPELINE_RUN_PREFIX: str = os.getenv(
-    "MLFLOW_PIPELINE_RUN_PREFIX", 
-    "Spaceship_Titanic_Full_Pipeline"
+    "MLFLOW_PIPELINE_RUN_PREFIX", "Spaceship_Titanic_Full_Pipeline"
 )
 
 
 # ---------------------------------------------------------------------------
 # Rutas dinamicas por feature set
 # ---------------------------------------------------------------------------
+
 
 def get_train_scaled(fs_name: str) -> Path:
     """Ruta del dataset escalado para un feature set especifico.
