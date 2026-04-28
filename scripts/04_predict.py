@@ -8,6 +8,7 @@ El feature set y las features numericas se leen del metadata del modelo
 Ejecutar desde la raiz del proyecto:
     python scripts/04_predict.py
 """
+
 import json
 
 import mlflow
@@ -23,8 +24,7 @@ from src.config.settings import (
     get_submission_path,
     get_target_encoder_path,
 )
-from src.models.artifact_store import load_production_feature_set
-from src.models.predict import generate_submission, preprocess_test
+from src.models.inference import generate_submission, load_production_feature_set, preprocess_test
 from src.models.tracking import mlrun
 from src.reports.predictions.reports import build_prediction_md
 
@@ -74,8 +74,13 @@ def main() -> None:
     print(f"  Registros en test: {len(df_test)}")
 
     print("Preprocesando test...")
-    x_test = preprocess_test(df_test, fs=fs, feature_cols=feature_cols,
-                             scaler=scaler, target_encoder=target_encoder)
+    x_test = preprocess_test(
+        df_test,
+        fs=fs,
+        feature_cols=feature_cols,
+        scaler=scaler,
+        target_encoder=target_encoder,
+    )
     print(f"  Shape de X_test: {x_test.shape}")
 
     threshold = meta_prod.get("best_threshold", 0.5)
@@ -100,16 +105,30 @@ def main() -> None:
     print(f"  Total:                   {n_total}")
 
     build_prediction_md(
-        model_type=model_type, exp_label=f"exp-{exp_id}", fs_name=fs_name,
-        n_total=n_total, n_true=n_true, n_false=n_false,
-        pct_true=pct_true, pct_false=pct_false,
-        submission_path=str(submission_path), threshold=threshold,
+        model_type=model_type,
+        exp_label=f"exp-{exp_id}",
+        fs_name=fs_name,
+        n_total=n_total,
+        n_true=n_true,
+        n_false=n_false,
+        pct_true=pct_true,
+        pct_false=pct_false,
+        submission_path=str(submission_path),
+        threshold=threshold,
     )
 
     with mlrun("predictions", tags={"stage": "predict", "exp_id": exp_id}):
-        mlflow.log_params({"exp_id": exp_id, "threshold": threshold,
-                           "fs_name": fs_name, "model_type": model_type})
-        mlflow.log_metrics({"pct_transported": pct_true, "n_predictions": float(n_total)})
+        mlflow.log_params(
+            {
+                "exp_id": exp_id,
+                "threshold": threshold,
+                "fs_name": fs_name,
+                "model_type": model_type,
+            }
+        )
+        mlflow.log_metrics(
+            {"pct_transported": pct_true, "n_predictions": float(n_total)}
+        )
 
     print("\nScript de prediccion completado.")
 
