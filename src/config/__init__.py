@@ -1,4 +1,5 @@
 """Modulo de configuracion centralizada."""
+
 from src.config.settings import (
     TRAIN_RAW,
     TEST_RAW,

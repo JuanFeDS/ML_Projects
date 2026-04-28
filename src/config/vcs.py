@@ -1,4 +1,5 @@
 """Utilidades de control de versiones (git) para trazabilidad de experimentos."""
+
 from __future__ import annotations
 
 import subprocess
@@ -7,9 +8,13 @@ import subprocess
 def get_git_commit() -> str:
     """Retorna el hash corto del commit HEAD, o 'unknown' si falla."""
     try:
-        return subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL
-        ).decode().strip()
+        return (
+            subprocess.check_output(
+                ["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL
+            )
+            .decode()
+            .strip()
+        )
     except Exception:  # pylint: disable=broad-except
         return "unknown"
 
