@@ -4,6 +4,7 @@ Feature engineering para Spaceship Titanic.
 Re-exporta todo desde los submódulos para mantener compatibilidad con imports
 existentes (src.features.engineering.X sigue funcionando).
 """
+
 from src.features.engineering.base import (
     _SPENDING_COLS,
     _CATEGORICAL_FILL,

@@ -1,4 +1,5 @@
 """Features derivadas de contexto demográfico, familiar y estructural."""
+
 import numpy as np
 import pandas as pd
 
@@ -103,8 +104,8 @@ def create_child_route_features(df: pd.DataFrame) -> pd.DataFrame:
     df_copy["GroupHasChild"] = (
         df_copy.groupby("TravelGroup")["_is_child"].transform("max")
     ).astype(int)
-    df_copy["GroupChildRate"] = (
-        df_copy.groupby("TravelGroup")["_is_child"].transform("mean")
+    df_copy["GroupChildRate"] = df_copy.groupby("TravelGroup")["_is_child"].transform(
+        "mean"
     )
     df_copy = df_copy.drop(columns=["_is_child"])
 
@@ -130,10 +131,6 @@ def extract_last_name(df: pd.DataFrame) -> pd.DataFrame:
     """
     df_copy = df.copy()
     df_copy["LastName"] = (
-        df_copy["Name"]
-        .fillna("Unknown Unknown")
-        .str.split()
-        .str[-1]
-        .fillna("Unknown")
+        df_copy["Name"].fillna("Unknown Unknown").str.split().str[-1].fillna("Unknown")
     )
     return df_copy

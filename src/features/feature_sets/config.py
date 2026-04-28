@@ -1,14 +1,15 @@
 """
 Definición del dataclass FeatureSetConfig.
 """
+
 from dataclasses import dataclass, field
 from typing import Callable, List, Optional
 
 import pandas as pd
 
 
-@dataclass(frozen=True)  # pylint: disable=too-many-instance-attributes
-class FeatureSetConfig:
+@dataclass(frozen=True)  # pylint:  # pylint: disable=too-many-instance-attributes disable=too-many-instance-attributes
+class FeatureSetConfig:  # pylint: disable=too-many-instance-attributes
     """Configuración inmutable de un feature set.
 
     Attributes:

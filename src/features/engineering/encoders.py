@@ -4,12 +4,13 @@ Helpers de encoding y conversión de tipos para Spaceship Titanic.
 Incluye tanto las funciones públicas reutilizables como los helpers
 privados que eliminan duplicación interna entre funciones de feature engineering.
 """
-import pandas as pd
 
+import pandas as pd
 
 # ---------------------------------------------------------------------------
 # Helpers privados (usados internamente por base.py y derived.py)
 # ---------------------------------------------------------------------------
+
 
 def _cryo_to_int(series: pd.Series) -> pd.Series:
     """Convierte CryoSleep a entero: 1=True, 0=False/Unknown/NaN.
@@ -23,16 +24,13 @@ def _cryo_to_int(series: pd.Series) -> pd.Series:
     Returns:
         Serie de enteros 0/1.
     """
-    return (
-        series.map({True: 1, "True": 1, False: 0, "False": 0})
-        .fillna(0)
-        .astype(int)
-    )
+    return series.map({True: 1, "True": 1, False: 0, "False": 0}).fillna(0).astype(int)
 
 
 # ---------------------------------------------------------------------------
 # Funciones públicas de encoding
 # ---------------------------------------------------------------------------
+
 
 def encode_cryosleep(val) -> int:
     """Codifica CryoSleep a entero.

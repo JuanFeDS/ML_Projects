@@ -8,6 +8,7 @@ El registry los instancia con lambdas:
 
 Esto elimina la duplicación train/test — solo existe una función por feature set.
 """
+
 import pandas as pd
 
 from src.features.engineering.base import (
@@ -42,8 +43,8 @@ from src.features.engineering.derived_demographic import (
 def _add_group_size(df: pd.DataFrame) -> pd.DataFrame:
     """Recalcula GroupSize tras eliminar filas (train) o imputar (test)."""
     df_out = df.copy()
-    df_out["GroupSize"] = (
-        df_out.groupby("TravelGroup")["TravelGroup"].transform("count")
+    df_out["GroupSize"] = df_out.groupby("TravelGroup")["TravelGroup"].transform(
+        "count"
     )
     return df_out
 
@@ -51,6 +52,7 @@ def _add_group_size(df: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 # Pipelines activos
 # ---------------------------------------------------------------------------
+
 
 def _pipeline_fs001(df: pd.DataFrame, *, impute_age: bool = False) -> pd.DataFrame:
     """fs-001: features base."""
@@ -113,7 +115,7 @@ def _pipeline_fs015(df: pd.DataFrame, *, impute_age: bool = False) -> pd.DataFra
     """
     df_out = extract_cabin_features(df)
     df_out = extract_group_features(df_out)
-    df_out = apply_domain_rules(df_out)        # imputa antes de crear features
+    df_out = apply_domain_rules(df_out)  # imputa antes de crear features
     df_out = create_spending_features(df_out)
     df_out = impute_age_by_group(df_out)
     df_out = create_age_features(df_out)
@@ -128,8 +130,12 @@ def _pipeline_fs014(df: pd.DataFrame, *, impute_age: bool = False) -> pd.DataFra
     df_out = create_spending_features(df_out)
     df_out = impute_age_by_group(df_out)
     df_out = create_age_features(df_out)
-    df_out = create_group_context_features(df_out)     # GroupAllCryo, GroupAnyCryo, SpendShare, GroupSpendOthers_Log
-    df_out = create_spend_cluster_features(df_out)     # clusters + GroupCryoSegment + AgeVsPlanetMedian + IsExtremeSpender
+    df_out = create_group_context_features(
+        df_out
+    )  # GroupAllCryo, GroupAnyCryo, SpendShare, GroupSpendOthers_Log
+    df_out = create_spend_cluster_features(
+        df_out
+    )  # clusters + GroupCryoSegment + AgeVsPlanetMedian + IsExtremeSpender
     df_out = handle_missing_values_spaceship(df_out, impute_age=impute_age)
     return _add_group_size(df_out)
 
@@ -168,6 +174,7 @@ def _pipeline_fs019(df: pd.DataFrame, *, impute_age: bool = False) -> pd.DataFra
 # ---------------------------------------------------------------------------
 # Pipelines deprecados (no usar en nuevos experimentos)
 # ---------------------------------------------------------------------------
+
 
 def _pipeline_fs002(df: pd.DataFrame, *, impute_age: bool = False) -> pd.DataFrame:
     """fs-002: fs-001 + features de interacción cryo/spending/cabin. [DEPRECADO]"""
