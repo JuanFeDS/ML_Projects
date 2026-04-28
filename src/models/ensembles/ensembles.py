@@ -1,11 +1,12 @@
 """Construccion y evaluacion de modelos de ensemble: Stacking y Mixture of Experts."""
+
 from typing import Any, List, Tuple
 
 from sklearn.base import clone
 from sklearn.ensemble import HistGradientBoostingClassifier, StackingClassifier
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 
-from src.models.moe import MixtureOfExperts
+from src.models.ensembles.moe import MixtureOfExperts
 
 
 def build_stacking(
