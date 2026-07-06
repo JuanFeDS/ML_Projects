@@ -3,7 +3,7 @@
 
 Ejecutar desde la raiz del proyecto:
     python scripts/03_train.py
-    python scripts/03_train.py --feature-set fs-001_baseline --model LogisticRegression --no-tune --no-stack --no-moe
+    python scripts/03_train.py --feature-set fs-001_baseline --model LogisticRegression --no-tune --no-stack
     python scripts/03_train.py --feature-set fs-002_cryo_interactions
 """
 
@@ -41,9 +41,10 @@ def main() -> None:
         help="Omitir construccion del Stacking ensemble.",
     )
     parser.add_argument(
-        "--no-moe",
+        "--moe",
         action="store_true",
-        help="Omitir construccion del Mixture of Experts.",
+        help="Construir Mixture of Experts (default: no — nunca supero a CatBoost "
+        "solo en exp-013 a exp-021, ver ignore/estado_experimentos.md).",
     )
     parser.add_argument(
         "--shap",
@@ -64,7 +65,7 @@ def main() -> None:
     print(f"  Modelo      : {args.model or 'todos (comparacion)'}")
     print(f"  Tuning      : {'no' if args.no_tune else 'si'}")
     print(f"  Stacking    : {'no' if args.no_stack else 'si'}")
-    print(f"  MoE         : {'no' if args.no_moe else 'si'}")
+    print(f"  MoE         : {'si' if args.moe else 'no'}")
     print(f"  SHAP        : {'si' if args.shap else 'no'}")
     print("=" * 60)
 
@@ -73,7 +74,7 @@ def main() -> None:
         model_name=args.model,
         tune=not args.no_tune,
         build_stack=not args.no_stack,
-        build_moe_flag=not args.no_moe,
+        build_moe_flag=args.moe,
         compute_shap=args.shap,
         n_iter=args.n_iter,
     ).run()
