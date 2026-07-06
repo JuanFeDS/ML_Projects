@@ -1,5 +1,9 @@
 # Model Card — Spaceship Titanic
 
+> ⚠️ **Este modelo (exp-031) no es la fuente de verdad actual.** Hereda leakage de `LastName_TE`
+> y nunca se confirmó en Kaggle. Para submissions usar exp-034 (0.80944 Kaggle); para validación
+> honesta usar la metodología GroupKFold de exp-053/054. Ver detalle y criterio en
+> [`decision_fuente_de_verdad.md`](decision_fuente_de_verdad.md).
 
 ## Modelo
 
