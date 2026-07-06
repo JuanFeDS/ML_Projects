@@ -72,7 +72,8 @@ class TrainingPipeline:  # pylint: disable=too-many-instance-attributes,too-few-
         model_name: Si se indica, entrena solo ese modelo (sin comparacion multiple).
         tune: Si True, ejecuta tuning de hiperparametros con Optuna.
         build_stack: Si True, construye un StackingClassifier con los top-3 modelos.
-        build_moe_flag: Si True, construye un Mixture of Experts.
+        build_moe_flag: Si True, construye un Mixture of Experts (default False —
+            en exp-013 a exp-021 nunca supero a CatBoost solo, ver ignore/estado_experimentos.md).
         compute_shap: Si True, calcula SHAP values y agrega plots al reporte.
         n_iter: Numero de trials de Optuna.
     """
@@ -83,7 +84,7 @@ class TrainingPipeline:  # pylint: disable=too-many-instance-attributes,too-few-
         model_name: Optional[str] = None,
         tune: bool = True,
         build_stack: bool = True,
-        build_moe_flag: bool = True,
+        build_moe_flag: bool = False,
         compute_shap: bool = False,
         n_iter: int = 25,
     ) -> None:
