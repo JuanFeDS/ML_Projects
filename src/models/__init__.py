@@ -35,8 +35,6 @@ from src.models.training import (
     prefix_param_space,
     tune_model,
 )
-# TabNet imports are excluded — pytorch_tabnet requires torch DLLs loaded first.
-# Use direct imports: from src.models.training.tabnet_training import TabNetConfig
 
 __all__ = [
     "MODELS",
