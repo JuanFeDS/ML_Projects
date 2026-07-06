@@ -28,6 +28,9 @@ EDA  →  Feature Engineering  →  Entrenamiento  →  Predicción
 
 Cada etapa genera reportes automáticos en `reports/` (`.md` + `.html`) y registra métricas en MLflow. El entrenamiento además actualiza `docs/model/` con una tarjeta por experimento y el log acumulado de todos los runs.
 
+> ⚠️ El modelo en `artifacts/production/` no es la fuente de verdad actual — ver
+> [`docs/model/decision_fuente_de_verdad.md`](docs/model/decision_fuente_de_verdad.md).
+
 ### Entrenamiento iterativo
 
 La etapa de entrenamiento está diseñada para ser iterativa. Cada run:

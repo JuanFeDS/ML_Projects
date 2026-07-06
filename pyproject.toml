@@ -15,7 +15,6 @@ dependencies = [
     "lightgbm==4.6.0",
     "xgboost==3.2.0",
     "catboost==1.2.10",
-    "tabpfn==7.1.1",
     "optuna==4.8.0",
     "joblib==1.4.0",
     # Visualizacion
@@ -35,7 +34,6 @@ dependencies = [
     "pylint>=4.0.5",
     "tabulate>=0.10.0",
     "shap>=0.51.0",
-    "pytorch-tabnet>=4.1.0",
 ]
 
 [project.scripts]

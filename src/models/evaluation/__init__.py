@@ -7,7 +7,6 @@ from src.models.evaluation.evaluation import (
     evaluate_on_validation,
     optimize_threshold,
 )
-from src.models.evaluation.stacking_oof import oof_027, oof_033, oof_tabpfn
 
 __all__ = [
     "analyze_errors",
@@ -15,7 +14,4 @@ __all__ = [
     "evaluate_models",
     "evaluate_on_validation",
     "optimize_threshold",
-    "oof_027",
-    "oof_033",
-    "oof_tabpfn",
 ]
