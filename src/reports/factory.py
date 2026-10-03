@@ -10,7 +10,11 @@ from typing import Any, Dict, List
 
 import numpy as np
 
-from src.reports.training.reports import TrainingResults, build_training_html, build_training_md
+from src.reports.training.reports import (
+    TrainingResults,
+    build_training_html,
+    build_training_md,
+)
 
 
 def _top_feature_names_for_insights(

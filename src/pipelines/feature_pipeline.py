@@ -6,10 +6,12 @@ garantizar consistencia entre scripts, notebooks y producción.
 """
 
 from typing import Any, Dict
-import pandas as pd
+
 import joblib
+import pandas as pd
 from sklearn.preprocessing import StandardScaler
-from src.config.settings import MODELS_DIR, get_target_encoder_path, get_scaler_path
+
+from src.config.settings import MODELS_DIR, get_scaler_path, get_target_encoder_path
 from src.features.constants import TARGET
 from src.features.engineering import encode_cryosleep, encode_side
 

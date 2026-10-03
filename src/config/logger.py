@@ -6,12 +6,11 @@ and used across the application. It configures both console and file handlers
 with appropriate formatting and log levels.
 """
 
+import logging
 import os
 from datetime import datetime
-from typing import Optional
-
-import logging
 from logging.handlers import RotatingFileHandler
+from typing import Optional
 
 # Constants
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s - %(name)s - %(funcName)s"

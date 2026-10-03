@@ -3,41 +3,51 @@
 Cubre el registro FEATURE_SETS, FeatureSetConfig y los pipelines principales.
 Todos los tests usan DataFrames minimos construidos en memoria.
 """
+
 import pandas as pd
 import pytest
 
 from src.features.feature_sets.config import FeatureSetConfig
-from src.features.feature_sets.registry import FEATURE_SETS, DEFAULT_FEATURE_SET
-
+from src.features.feature_sets.registry import DEFAULT_FEATURE_SET, FEATURE_SETS
 
 # ---------------------------------------------------------------------------
 # Fixture
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def raw_df() -> pd.DataFrame:
     """Dataset crudo minimo que simula train.csv."""
-    return pd.DataFrame({
-        "PassengerId": ["0001_01", "0001_02", "0002_01", "0003_01", "0003_02"],
-        "Cabin": ["B/0034/P", "B/0035/S", "G/0100/P", "C/0010/S", "C/0011/P"],
-        "HomePlanet": ["Europa", "Europa", "Earth", "Europa", "Europa"],
-        "CryoSleep": [True, False, False, True, False],
-        "Destination": ["TRAPPIST-1e", "55 Cancri e", "PSO J318.5-22", "TRAPPIST-1e", "55 Cancri e"],
-        "Age": [23.0, 45.0, 17.0, 8.0, 35.0],
-        "VIP": [False, False, False, False, True],
-        "RoomService": [0.0, 150.0, 0.0, 0.0, 200.0],
-        "FoodCourt": [0.0, 200.0, 50.0, 0.0, 100.0],
-        "ShoppingMall": [0.0, 0.0, 0.0, 0.0, 50.0],
-        "Spa": [0.0, 300.0, 0.0, 0.0, 75.0],
-        "VRDeck": [0.0, 100.0, 0.0, 0.0, 125.0],
-        "Name": ["Alice A", "Bob A", "Carol B", "Dave C", "Eve C"],
-        "Transported": [True, False, True, True, False],
-    })
+    return pd.DataFrame(
+        {
+            "PassengerId": ["0001_01", "0001_02", "0002_01", "0003_01", "0003_02"],
+            "Cabin": ["B/0034/P", "B/0035/S", "G/0100/P", "C/0010/S", "C/0011/P"],
+            "HomePlanet": ["Europa", "Europa", "Earth", "Europa", "Europa"],
+            "CryoSleep": [True, False, False, True, False],
+            "Destination": [
+                "TRAPPIST-1e",
+                "55 Cancri e",
+                "PSO J318.5-22",
+                "TRAPPIST-1e",
+                "55 Cancri e",
+            ],
+            "Age": [23.0, 45.0, 17.0, 8.0, 35.0],
+            "VIP": [False, False, False, False, True],
+            "RoomService": [0.0, 150.0, 0.0, 0.0, 200.0],
+            "FoodCourt": [0.0, 200.0, 50.0, 0.0, 100.0],
+            "ShoppingMall": [0.0, 0.0, 0.0, 0.0, 50.0],
+            "Spa": [0.0, 300.0, 0.0, 0.0, 75.0],
+            "VRDeck": [0.0, 100.0, 0.0, 0.0, 125.0],
+            "Name": ["Alice A", "Bob A", "Carol B", "Dave C", "Eve C"],
+            "Transported": [True, False, True, True, False],
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
 # Registro y FeatureSetConfig
 # ---------------------------------------------------------------------------
+
 
 class TestFeatureSetRegistry:
     def test_feature_sets_not_empty(self):
@@ -81,7 +91,9 @@ class TestFeatureSetRegistry:
             "fs-013_group_context",
         ]
         for fs_id in active_ids:
-            assert not FEATURE_SETS[fs_id].deprecated, f"{fs_id} no deberia ser deprecated"
+            assert not FEATURE_SETS[
+                fs_id
+            ].deprecated, f"{fs_id} no deberia ser deprecated"
 
     def test_each_entry_has_description(self):
         for name, fs in FEATURE_SETS.items():
@@ -96,14 +108,13 @@ class TestFeatureSetRegistry:
         """Ninguna feature debe estar en numéricas y categóricas al mismo tiempo."""
         for name, fs in FEATURE_SETS.items():
             overlap = set(fs.numeric_features) & set(fs.categorical_cols)
-            assert not overlap, (
-                f"{name}: features en ambas listas: {overlap}"
-            )
+            assert not overlap, f"{name}: features en ambas listas: {overlap}"
 
 
 # ---------------------------------------------------------------------------
 # Pipeline fs-001
 # ---------------------------------------------------------------------------
+
 
 class TestPipelineFs001:
     def test_output_shape_has_more_cols_than_input(self, raw_df):
@@ -114,12 +125,21 @@ class TestPipelineFs001:
     def test_expected_derived_columns_present(self, raw_df):
         fs = FEATURE_SETS["fs-001_baseline"]
         out = fs.pipeline(raw_df)
-        expected = {"Deck", "CabinNumber", "Side", "TravelGroup", "GroupSize",
-                    "TotalSpending", "TotalSpending_Log", "HasSpending",
-                    "SpendingCategories", "AgeCategory"}
-        assert expected.issubset(out.columns), (
-            f"Columnas faltantes: {expected - set(out.columns)}"
-        )
+        expected = {
+            "Deck",
+            "CabinNumber",
+            "Side",
+            "TravelGroup",
+            "GroupSize",
+            "TotalSpending",
+            "TotalSpending_Log",
+            "HasSpending",
+            "SpendingCategories",
+            "AgeCategory",
+        }
+        assert expected.issubset(
+            out.columns
+        ), f"Columnas faltantes: {expected - set(out.columns)}"
 
     def test_no_nulls_in_spending_after_pipeline(self, raw_df):
         fs = FEATURE_SETS["fs-001_baseline"]
@@ -156,14 +176,20 @@ class TestPipelineFs001:
 # Pipeline fs-013 (grupo + context features)
 # ---------------------------------------------------------------------------
 
+
 class TestPipelineFs013:
     def test_group_context_cols_added(self, raw_df):
         fs = FEATURE_SETS["fs-013_group_context"]
         out = fs.pipeline(raw_df)
-        group_cols = {"GroupAllCryo", "GroupAnyCryo", "SpendShare", "GroupSpendOthers_Log"}
-        assert group_cols.issubset(out.columns), (
-            f"Columnas de grupo faltantes: {group_cols - set(out.columns)}"
-        )
+        group_cols = {
+            "GroupAllCryo",
+            "GroupAnyCryo",
+            "SpendShare",
+            "GroupSpendOthers_Log",
+        }
+        assert group_cols.issubset(
+            out.columns
+        ), f"Columnas de grupo faltantes: {group_cols - set(out.columns)}"
 
     def test_group_all_cryo_binary(self, raw_df):
         """GroupAllCryo solo debe contener 0 y 1."""

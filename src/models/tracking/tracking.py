@@ -6,12 +6,12 @@ funciones helper para loguear parametros, metricas y artefactos.
 """
 
 import os
-from typing import Any, Dict, Optional
 from contextlib import contextmanager
+from typing import Any, Dict, Optional
 
 import mlflow
 
-from src.config.settings import MLFLOW_TRACKING_URI, MLFLOW_EXPERIMENT_NAME
+from src.config.settings import MLFLOW_EXPERIMENT_NAME, MLFLOW_TRACKING_URI
 
 
 def setup_mlflow():

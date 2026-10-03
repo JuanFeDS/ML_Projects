@@ -19,9 +19,8 @@ from src.reports.eda.plots.bivariate import (
 )
 from src.reports.eda.plots.cabin import (
     deck_homeplanet_heatmap as cabin_deck_homeplanet_heatmap,
-    deck_transport_rate_bar,
-    side_transport_rate_bar,
 )
+from src.reports.eda.plots.cabin import deck_transport_rate_bar, side_transport_rate_bar
 from src.reports.eda.plots.categorical import (
     categorical_double_bar,
     decisions_table,

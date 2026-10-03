@@ -22,6 +22,11 @@ from src.features.engineering.base import (
     impute_age_by_group,
     impute_spending_group_aware,
 )
+from src.features.engineering.derived_demographic import (
+    create_child_route_features,
+    create_structural_context_features,
+    extract_last_name,
+)
 from src.features.engineering.derived_group import (
     _add_cabin_percentile,
     create_group_consistency_features,
@@ -32,11 +37,6 @@ from src.features.engineering.derived_interaction import (
     create_cryo_spending_interaction_features,
     create_solo_interaction_features,
     create_spend_cluster_features,
-)
-from src.features.engineering.derived_demographic import (
-    create_child_route_features,
-    create_structural_context_features,
-    extract_last_name,
 )
 
 

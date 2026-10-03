@@ -329,4 +329,8 @@ def compute_shap_plots(
     beeswarm = shap_beeswarm(model, x_train, feature_names)
     print("  [SHAP] Calculando waterfall (peor vs mejor prediccion)...")
     waterfall = shap_waterfall_comparison(model, val_preds, feature_names)
-    return {"summary_bar": shap_bar, "beeswarm": beeswarm, "waterfall_comparison": waterfall}
+    return {
+        "summary_bar": shap_bar,
+        "beeswarm": beeswarm,
+        "waterfall_comparison": waterfall,
+    }

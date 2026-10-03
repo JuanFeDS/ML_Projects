@@ -91,7 +91,9 @@ def cv_score(
     return float(np.mean(scores))
 
 
-def tune(x: pd.DataFrame, y: pd.Series, cv: StratifiedKFold, config: CatBoostTuneConfig) -> dict:
+def tune(
+    x: pd.DataFrame, y: pd.Series, cv: StratifiedKFold, config: CatBoostTuneConfig
+) -> dict:
     """Optimiza hiperparametros de CatBoost con Optuna TPE.
 
     Persiste el estudio en SQLite para reanudar si el script falla.

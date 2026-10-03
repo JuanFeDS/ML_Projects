@@ -32,7 +32,12 @@ from src.config.vcs import create_git_tag, get_git_commit
 from src.features.constants import TARGET
 from src.features.feature_sets import FEATURE_SETS
 from src.models.ensembles import build_moe, build_stacking
-from src.models.evaluation import analyze_errors, compute_oof_metrics, evaluate_models, optimize_threshold
+from src.models.evaluation import (
+    analyze_errors,
+    compute_oof_metrics,
+    evaluate_models,
+    optimize_threshold,
+)
 from src.models.tracking import mlrun
 from src.models.training import (
     MODELS,

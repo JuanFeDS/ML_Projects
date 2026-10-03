@@ -6,8 +6,8 @@ existentes (src.features.engineering.X sigue funcionando).
 """
 
 from src.features.engineering.base import (
-    _SPENDING_COLS,
     _CATEGORICAL_FILL,
+    _SPENDING_COLS,
     apply_domain_rules,
     create_age_features,
     create_spending_features,
@@ -16,6 +16,11 @@ from src.features.engineering.base import (
     handle_missing_values_spaceship,
     impute_age_by_group,
     impute_spending_group_aware,
+)
+from src.features.engineering.derived_demographic import (
+    create_child_route_features,
+    create_structural_context_features,
+    extract_last_name,
 )
 from src.features.engineering.derived_group import (
     _add_cabin_percentile,
@@ -27,11 +32,6 @@ from src.features.engineering.derived_interaction import (
     create_cryo_spending_interaction_features,
     create_solo_interaction_features,
     create_spend_cluster_features,
-)
-from src.features.engineering.derived_demographic import (
-    create_child_route_features,
-    create_structural_context_features,
-    extract_last_name,
 )
 from src.features.engineering.encoders import (
     _cryo_to_int,

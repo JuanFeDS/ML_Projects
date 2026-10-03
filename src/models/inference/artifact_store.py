@@ -176,9 +176,9 @@ def load_production_feature_set(meta_prod: dict) -> tuple:
     Returns:
         Tupla (fs_name, FeatureSetConfig).
     """
-    from src.features.feature_sets import (
+    from src.features.feature_sets import (  # pylint: disable=import-outside-toplevel
         FEATURE_SETS,
-    )  # pylint: disable=import-outside-toplevel
+    )
 
     fs_name = meta_prod.get("feature_set_name", "fs-001_baseline")
     if fs_name not in FEATURE_SETS:

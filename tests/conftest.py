@@ -1,4 +1,5 @@
 """Asegura que la raíz del proyecto esté en sys.path para imports de `src`."""
+
 import sys
 from pathlib import Path
 

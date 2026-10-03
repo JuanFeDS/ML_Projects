@@ -11,6 +11,8 @@ de sugerencias de Optuna (suggest_int, suggest_float, suggest_categorical).
 
 from typing import Any, Callable, Dict
 
+from catboost import CatBoostClassifier
+from lightgbm import LGBMClassifier
 from sklearn.dummy import DummyClassifier
 from sklearn.ensemble import (
     ExtraTreesClassifier,
@@ -19,10 +21,7 @@ from sklearn.ensemble import (
     RandomForestClassifier,
 )
 from sklearn.linear_model import LogisticRegression
-from catboost import CatBoostClassifier
 from xgboost import XGBClassifier
-from lightgbm import LGBMClassifier
-
 
 MODELS: Dict[str, Any] = {
     "Baseline": DummyClassifier(strategy="most_frequent", random_state=42),

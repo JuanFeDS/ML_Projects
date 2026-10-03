@@ -9,8 +9,8 @@ from typing import List, Optional, Tuple
 
 import mlflow
 
-from src.models.tracking import setup_mlflow
 from src.config.settings import MLFLOW_PIPELINE_RUN_PREFIX
+from src.models.tracking import setup_mlflow
 
 os.environ["PYTHONUTF8"] = "1"
 

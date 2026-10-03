@@ -1,4 +1,5 @@
 """Smoke: API de data_pipeline delega en feature_pipeline."""
+
 import pytest
 
 pytest.importorskip("dotenv")

@@ -28,11 +28,8 @@ from src.reports.eda.plots.bivariate import (
     cryo_homeplanet_heatmap,
     deck_homeplanet_heatmap,
 )
-from src.reports.eda.plots.cabin import (
-    deck_transport_rate_bar,
-    side_transport_rate_bar,
-    deck_homeplanet_heatmap as cabin_deck_heatmap,
-)
+from src.reports.eda.plots.cabin import deck_homeplanet_heatmap as cabin_deck_heatmap
+from src.reports.eda.plots.cabin import deck_transport_rate_bar, side_transport_rate_bar
 from src.reports.eda.plots.categorical import (
     categorical_double_bar,
     decisions_table,
@@ -303,7 +300,9 @@ def _section_group(md: MarkdownReport, html: HTMLReport, group: dict) -> None:
     )
 
 
-def _section_decisions(md: MarkdownReport, derived: dict, spending: dict) -> None:  # pylint: disable=unused-argument
+def _section_decisions(
+    md: MarkdownReport, derived: dict, spending: dict
+) -> None:  # pylint: disable=unused-argument
     sp = derived["spending"]
     gs = derived["groupsize"]
     decisions = pd.DataFrame(

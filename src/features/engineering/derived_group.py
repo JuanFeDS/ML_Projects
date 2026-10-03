@@ -3,8 +3,8 @@
 import numpy as np
 import pandas as pd
 
-from src.features.engineering.encoders import _cryo_to_int
 from src.features.engineering.base import _SPENDING_COLS
+from src.features.engineering.encoders import _cryo_to_int
 
 
 def _add_cabin_percentile(df: pd.DataFrame) -> pd.DataFrame:

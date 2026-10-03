@@ -5,8 +5,10 @@ Este módulo encapsula la creación de los reportes Markdown y HTML
 que documentan las transformaciones del pipeline de características.
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
+
 import pandas as pd
+
 from src.config.settings import REPORTS_DIR
 from src.reports.builder import HTMLReport, MarkdownReport
 from src.reports.features.plots import (

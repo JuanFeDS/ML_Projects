@@ -4,73 +4,79 @@ Cubre las transformaciones base, encoders y features derivadas.
 Todos los tests usan DataFrames minimos construidos en memoria —
 sin dependencia de archivos de datos externos.
 """
+
 import numpy as np
 import pandas as pd
 import pytest
 
 from src.features.engineering import (
+    apply_domain_rules,
+    create_age_features,
+    create_group_context_features,
+    create_solo_interaction_features,
+    create_spending_features,
     encode_cryosleep,
     encode_side,
     extract_cabin_features,
     extract_group_features,
-    create_spending_features,
-    create_age_features,
     handle_missing_values_spaceship,
-    apply_domain_rules,
-    create_solo_interaction_features,
-    create_group_context_features,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def minimal_df() -> pd.DataFrame:
     """DataFrame minimo con las columnas crudas del dataset Spaceship Titanic."""
-    return pd.DataFrame({
-        "PassengerId": ["0001_01", "0001_02", "0002_01"],
-        "Cabin": ["B/0034/P", "B/0035/S", "G/0100/P"],
-        "HomePlanet": ["Europa", "Europa", "Earth"],
-        "CryoSleep": [True, False, False],
-        "Destination": ["TRAPPIST-1e", "55 Cancri e", "PSO J318.5-22"],
-        "Age": [23.0, 45.0, 17.0],
-        "VIP": [False, False, False],
-        "RoomService": [0.0, 150.0, 0.0],
-        "FoodCourt": [0.0, 200.0, 50.0],
-        "ShoppingMall": [0.0, 0.0, 0.0],
-        "Spa": [0.0, 300.0, 0.0],
-        "VRDeck": [0.0, 100.0, 0.0],
-        "Name": ["Alice A", "Bob A", "Carol B"],
-        "Transported": [True, False, True],
-    })
+    return pd.DataFrame(
+        {
+            "PassengerId": ["0001_01", "0001_02", "0002_01"],
+            "Cabin": ["B/0034/P", "B/0035/S", "G/0100/P"],
+            "HomePlanet": ["Europa", "Europa", "Earth"],
+            "CryoSleep": [True, False, False],
+            "Destination": ["TRAPPIST-1e", "55 Cancri e", "PSO J318.5-22"],
+            "Age": [23.0, 45.0, 17.0],
+            "VIP": [False, False, False],
+            "RoomService": [0.0, 150.0, 0.0],
+            "FoodCourt": [0.0, 200.0, 50.0],
+            "ShoppingMall": [0.0, 0.0, 0.0],
+            "Spa": [0.0, 300.0, 0.0],
+            "VRDeck": [0.0, 100.0, 0.0],
+            "Name": ["Alice A", "Bob A", "Carol B"],
+            "Transported": [True, False, True],
+        }
+    )
 
 
 @pytest.fixture
 def df_with_nulls() -> pd.DataFrame:
     """DataFrame con nulos tipicos para probar imputacion."""
-    return pd.DataFrame({
-        "PassengerId": ["0001_01", "0001_02", "0002_01"],
-        "Cabin": [None, "B/0035/S", "G/0100/P"],
-        "HomePlanet": [None, "Europa", "Earth"],
-        "CryoSleep": [None, False, True],
-        "Destination": ["TRAPPIST-1e", None, "PSO J318.5-22"],
-        "Age": [None, 45.0, 17.0],
-        "VIP": [False, None, False],
-        "RoomService": [None, 150.0, None],
-        "FoodCourt": [None, 200.0, None],
-        "ShoppingMall": [None, 0.0, None],
-        "Spa": [None, 300.0, None],
-        "VRDeck": [None, 100.0, None],
-        "Name": ["Alice A", "Bob A", "Carol B"],
-        "Transported": [True, False, True],
-    })
+    return pd.DataFrame(
+        {
+            "PassengerId": ["0001_01", "0001_02", "0002_01"],
+            "Cabin": [None, "B/0035/S", "G/0100/P"],
+            "HomePlanet": [None, "Europa", "Earth"],
+            "CryoSleep": [None, False, True],
+            "Destination": ["TRAPPIST-1e", None, "PSO J318.5-22"],
+            "Age": [None, 45.0, 17.0],
+            "VIP": [False, None, False],
+            "RoomService": [None, 150.0, None],
+            "FoodCourt": [None, 200.0, None],
+            "ShoppingMall": [None, 0.0, None],
+            "Spa": [None, 300.0, None],
+            "VRDeck": [None, 100.0, None],
+            "Name": ["Alice A", "Bob A", "Carol B"],
+            "Transported": [True, False, True],
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
 # extract_cabin_features
 # ---------------------------------------------------------------------------
+
 
 class TestExtractCabinFeatures:
     def test_splits_correctly(self, minimal_df):
@@ -99,6 +105,7 @@ class TestExtractCabinFeatures:
 # extract_group_features
 # ---------------------------------------------------------------------------
 
+
 class TestExtractGroupFeatures:
     def test_group_size_correct(self, minimal_df):
         out = extract_group_features(minimal_df)
@@ -122,6 +129,7 @@ class TestExtractGroupFeatures:
 # ---------------------------------------------------------------------------
 # create_spending_features
 # ---------------------------------------------------------------------------
+
 
 class TestCreateSpendingFeatures:
     def test_total_spending_log_positive(self, minimal_df):
@@ -148,6 +156,7 @@ class TestCreateSpendingFeatures:
 # ---------------------------------------------------------------------------
 # create_age_features
 # ---------------------------------------------------------------------------
+
 
 class TestCreateAgeFeatures:
     def test_child_category(self, minimal_df):
@@ -179,6 +188,7 @@ class TestCreateAgeFeatures:
 # encode_cryosleep / encode_side
 # ---------------------------------------------------------------------------
 
+
 class TestEncoders:
     def test_encode_cryosleep_true(self, minimal_df):
         # encode_cryosleep es una funcion escalar; se aplica con .map()
@@ -191,15 +201,17 @@ class TestEncoders:
         # encode_side es una funcion escalar; se aplica con .map()
         df = extract_cabin_features(minimal_df)
         df["Side_Encoded"] = df["Side"].map(encode_side)
-        assert df.loc[0, "Side_Encoded"] == 0   # P -> 0
-        assert df.loc[1, "Side_Encoded"] == 1   # S -> 1
+        assert df.loc[0, "Side_Encoded"] == 0  # P -> 0
+        assert df.loc[1, "Side_Encoded"] == 1  # S -> 1
 
     def test_encode_cryosleep_handles_null(self, df_with_nulls):
         df = df_with_nulls.copy()
         df["CryoSleep"] = df["CryoSleep"].astype(object)
         df = extract_cabin_features(df)
         # NaN no esta en el dict de encode_cryosleep -> devuelve NaN -> rellenamos con -1
-        df["CryoSleep_Encoded"] = df["CryoSleep"].map(encode_cryosleep).fillna(-1).astype(int)
+        df["CryoSleep_Encoded"] = (
+            df["CryoSleep"].map(encode_cryosleep).fillna(-1).astype(int)
+        )
         # -1 = desconocido (comportamiento esperado para None/NaN)
         assert df.loc[0, "CryoSleep_Encoded"] == -1
 
@@ -207,6 +219,7 @@ class TestEncoders:
 # ---------------------------------------------------------------------------
 # handle_missing_values_spaceship
 # ---------------------------------------------------------------------------
+
 
 class TestHandleMissingValues:
     def test_no_nulls_after_imputation(self, df_with_nulls):
@@ -230,6 +243,7 @@ class TestHandleMissingValues:
 # ---------------------------------------------------------------------------
 # apply_domain_rules
 # ---------------------------------------------------------------------------
+
 
 def _domain_rules_base_df(**overrides) -> pd.DataFrame:
     """DataFrame minimo con todas las columnas requeridas por apply_domain_rules."""
@@ -277,14 +291,15 @@ class TestApplyDomainRules:
 # create_solo_interaction_features
 # ---------------------------------------------------------------------------
 
+
 class TestSoloInteractions:
     def test_is_alone_flag(self, minimal_df):
         # create_solo_interaction_features requiere TotalSpending (de create_spending_features)
         df = extract_group_features(minimal_df)
         df = create_spending_features(df)
         out = create_solo_interaction_features(df)
-        assert out.loc[2, "IsAlone"] == 1   # grupo de 1
-        assert out.loc[0, "IsAlone"] == 0   # grupo de 2
+        assert out.loc[2, "IsAlone"] == 1  # grupo de 1
+        assert out.loc[0, "IsAlone"] == 0  # grupo de 2
 
     def test_is_child_flag(self, minimal_df):
         # IsChild: Age < 13 (umbral del dominio, no 18)
@@ -293,43 +308,48 @@ class TestSoloInteractions:
         df = extract_group_features(df)
         df = create_spending_features(df)
         out = create_solo_interaction_features(df)
-        assert out.loc[2, "IsChild"] == 1   # Age=10 -> child (< 13)
-        assert out.loc[1, "IsChild"] == 0   # Age=45 -> no child
+        assert out.loc[2, "IsChild"] == 1  # Age=10 -> child (< 13)
+        assert out.loc[1, "IsChild"] == 0  # Age=45 -> no child
 
 
 # ---------------------------------------------------------------------------
 # create_group_context_features
 # ---------------------------------------------------------------------------
 
+
 class TestGroupContextFeatures:
     def test_group_all_cryo(self):
-        df = pd.DataFrame({
-            "PassengerId": ["0001_01", "0001_02"],
-            "TravelGroup": ["0001", "0001"],
-            "CryoSleep": [True, True],
-            "RoomService": [0.0, 0.0],
-            "FoodCourt": [0.0, 0.0],
-            "ShoppingMall": [0.0, 0.0],
-            "Spa": [0.0, 0.0],
-            "VRDeck": [0.0, 0.0],
-            "TotalSpending_Log": [0.0, 0.0],
-        })
+        df = pd.DataFrame(
+            {
+                "PassengerId": ["0001_01", "0001_02"],
+                "TravelGroup": ["0001", "0001"],
+                "CryoSleep": [True, True],
+                "RoomService": [0.0, 0.0],
+                "FoodCourt": [0.0, 0.0],
+                "ShoppingMall": [0.0, 0.0],
+                "Spa": [0.0, 0.0],
+                "VRDeck": [0.0, 0.0],
+                "TotalSpending_Log": [0.0, 0.0],
+            }
+        )
         out = create_group_context_features(df)
         assert out["GroupAllCryo"].iloc[0] == 1
         assert out["GroupAllCryo"].iloc[1] == 1
 
     def test_group_any_cryo_mixed(self):
-        df = pd.DataFrame({
-            "PassengerId": ["0001_01", "0001_02"],
-            "TravelGroup": ["0001", "0001"],
-            "CryoSleep": [True, False],
-            "RoomService": [0.0, 100.0],
-            "FoodCourt": [0.0, 0.0],
-            "ShoppingMall": [0.0, 0.0],
-            "Spa": [0.0, 0.0],
-            "VRDeck": [0.0, 0.0],
-            "TotalSpending_Log": [0.0, 4.6],
-        })
+        df = pd.DataFrame(
+            {
+                "PassengerId": ["0001_01", "0001_02"],
+                "TravelGroup": ["0001", "0001"],
+                "CryoSleep": [True, False],
+                "RoomService": [0.0, 100.0],
+                "FoodCourt": [0.0, 0.0],
+                "ShoppingMall": [0.0, 0.0],
+                "Spa": [0.0, 0.0],
+                "VRDeck": [0.0, 0.0],
+                "TotalSpending_Log": [0.0, 4.6],
+            }
+        )
         out = create_group_context_features(df)
-        assert out["GroupAllCryo"].iloc[0] == 0   # no todos en cryo
-        assert out["GroupAnyCryo"].iloc[0] == 1   # al menos uno en cryo
+        assert out["GroupAllCryo"].iloc[0] == 0  # no todos en cryo
+        assert out["GroupAnyCryo"].iloc[0] == 1  # al menos uno en cryo

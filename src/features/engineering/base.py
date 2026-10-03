@@ -6,9 +6,8 @@ y creación de features fundamentales. Todas las funciones son puras:
 nunca mutan el input (siempre df.copy()).
 """
 
-import pandas as pd
 import numpy as np
-
+import pandas as pd
 
 _SPENDING_COLS = ["RoomService", "FoodCourt", "ShoppingMall", "Spa", "VRDeck"]
 _CATEGORICAL_FILL = ["HomePlanet", "CryoSleep", "Destination", "VIP"]
